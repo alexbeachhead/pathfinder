@@ -7,6 +7,7 @@ import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ScreenshotMetadata } from '@/lib/types';
 import { X, ZoomIn, Download, FileText } from 'lucide-react';
 import { ThemedButton } from '@/components/ui/ThemedButton';
+import { downloadFile, downloadImageFromBase64 } from '../lib/formHelpers';
 
 interface ScreenshotPreviewProps {
   screenshots: ScreenshotMetadata[];
@@ -35,24 +36,18 @@ export function ScreenshotPreview({
   }, [selectedScreenshot]);
 
   const handleDownload = (screenshot: ScreenshotMetadata) => {
+    const filename = screenshot.viewportName.replace(/\s+/g, '-').toLowerCase();
+
     if (screenshot.previewMode === 'lightweight' && screenshot.domSnapshot) {
-      // Download HTML snapshot
-      const blob = new Blob([screenshot.domSnapshot], { type: 'text/html' });
+      downloadFile(screenshot.domSnapshot, `${filename}.html`, 'text/html');
+    } else if (screenshot.base64) {
+      downloadImageFromBase64(screenshot.base64, `${filename}.png`);
+    } else if (screenshot.screenshotUrl) {
+      // Download from URL
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${screenshot.viewportName.replace(/\s+/g, '-').toLowerCase()}.html`;
-      document.body.appendChild(link);
+      link.href = screenshot.screenshotUrl;
+      link.download = `${filename}.png`;
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    } else {
-      // Download screenshot image
-      const link = document.createElement('a');
-      link.href = `data:image/png;base64,${screenshot.base64}`;
-      link.download = `${screenshot.viewportName.replace(/\s+/g, '-').toLowerCase()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     }
   };
 
@@ -82,7 +77,7 @@ export function ScreenshotPreview({
               >
                 {/* Screenshot Image */}
                 <img
-                  src={`data:image/png;base64,${screenshot.base64}`}
+                  src={screenshot.screenshotUrl || (screenshot.base64 ? `data:image/png;base64,${screenshot.base64}` : '')}
                   alt={screenshot.viewportName}
                   className="w-full h-48 object-cover object-top transition-transform group-hover:scale-105"
                 />
@@ -204,7 +199,7 @@ export function ScreenshotPreview({
                   />
                 ) : (
                   <img
-                    src={`data:image/png;base64,${selectedScreenshot.base64}`}
+                    src={selectedScreenshot.screenshotUrl || (selectedScreenshot.base64 ? `data:image/png;base64,${selectedScreenshot.base64}` : '')}
                     alt={selectedScreenshot.viewportName}
                     className="w-full rounded-lg"
                     style={{

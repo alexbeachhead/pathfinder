@@ -89,7 +89,7 @@ interface AppState {
 }
 
 // Helper function to get health glow color
-const getHealthGlowColorHelper = (status: HealthGlowStatus): string => {
+const getHealthGlowColorHelper = (status: HealthGlowStatus | 'excellent' | 'good' | 'poor' | null): string => {
   switch (status) {
     case 'excellent':
       return 'rgba(34, 197, 94, 0.15)'; // green
@@ -209,6 +209,7 @@ export const useNavigation = () => useAppStore(
   useShallow((state) => ({
     currentPage: state.currentPage,
     setCurrentPage: state.setCurrentPage,
+    navigateTo: state.setCurrentPage, // Alias for backwards compatibility
     reportId: state.reportId,
     setReportId: state.setReportId,
   }))

@@ -30,7 +30,6 @@ export async function GET(
 
     return NextResponse.json({ analysis });
   } catch (error) {
-    console.error('Error getting root cause analysis:', error);
     return NextResponse.json(
       { error: 'Failed to get root cause analysis' },
       { status: 500 }

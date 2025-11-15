@@ -237,27 +237,25 @@ export function adjustDifficultyBasedOnPerformance(
 }
 
 /**
+ * Difficulty level configuration
+ */
+const DIFFICULTY_CONFIG: Record<DifficultyLevel, { color: string; label: string }> = {
+  easy: { color: '#10b981', label: 'Easy' },
+  medium: { color: '#f59e0b', label: 'Medium' },
+  hard: { color: '#ef4444', label: 'Hard' },
+  expert: { color: '#8b5cf6', label: 'Expert' },
+};
+
+/**
  * Get difficulty color for UI
  */
 export function getDifficultyColor(level: DifficultyLevel): string {
-  const colors: Record<DifficultyLevel, string> = {
-    easy: '#10b981',    // Green
-    medium: '#f59e0b',  // Orange
-    hard: '#ef4444',    // Red
-    expert: '#8b5cf6',  // Purple
-  };
-  return colors[level];
+  return DIFFICULTY_CONFIG[level].color;
 }
 
 /**
  * Get difficulty label
  */
 export function getDifficultyLabel(level: DifficultyLevel): string {
-  const labels: Record<DifficultyLevel, string> = {
-    easy: 'Easy',
-    medium: 'Medium',
-    hard: 'Hard',
-    expert: 'Expert',
-  };
-  return labels[level];
+  return DIFFICULTY_CONFIG[level].label;
 }

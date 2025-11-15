@@ -44,7 +44,7 @@ interface AdaptiveDifficultyContextValue {
     review: SelectionResult[];
   };
   resetStats: () => void;
-  startPrompt: (promptId: string) => void;
+  startPrompt: (promptId: string, estimatedDuration?: number) => void;
   completePrompt: (
     promptId: string,
     success: boolean,
@@ -67,6 +67,28 @@ const AdaptiveDifficultyContext = createContext<AdaptiveDifficultyContextValue |
 const STORAGE_KEY = 'nl-test-performance-stats';
 const COMPLETED_KEY = 'nl-test-completed-prompts';
 
+// Helper function to safely parse JSON from localStorage
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    // Silent fail - return default value
+  }
+  return defaultValue;
+}
+
+// Helper function to safely save to localStorage
+function saveToStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Silent fail - localStorage might be full or unavailable
+  }
+}
+
 interface AdaptiveDifficultyProviderProps {
   children: ReactNode;
 }
@@ -85,44 +107,28 @@ export function AdaptiveDifficultyProvider({ children }: AdaptiveDifficultyProvi
 
   // Load stats from localStorage on mount
   useEffect(() => {
-    try {
-      const savedStats = localStorage.getItem(STORAGE_KEY);
-      if (savedStats) {
-        const parsed = JSON.parse(savedStats);
-        setUserStats({
-          ...parsed,
-          recentPerformance: parsed.recentPerformance || [],
-          performanceHistory: parsed.performanceHistory || [],
-        });
-      }
+    const parsed = loadFromStorage<UserPerformanceStats | null>(STORAGE_KEY, null);
+    if (parsed) {
+      setUserStats({
+        ...parsed,
+        recentPerformance: parsed.recentPerformance || [],
+        performanceHistory: parsed.performanceHistory || [],
+      });
+    }
 
-      const savedCompleted = localStorage.getItem(COMPLETED_KEY);
-      if (savedCompleted) {
-        setCompletedPromptIds(new Set(JSON.parse(savedCompleted)));
-      }
-    } catch (error) {
-      console.error('Error loading performance stats:', error);
+    const savedCompleted = loadFromStorage<string[]>(COMPLETED_KEY, []);
+    if (savedCompleted.length > 0) {
+      setCompletedPromptIds(new Set(savedCompleted));
     }
   }, []);
 
   // Save stats to localStorage when updated
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userStats));
-    } catch (error) {
-      console.error('Error saving performance stats:', error);
-    }
+    saveToStorage(STORAGE_KEY, userStats);
   }, [userStats]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        COMPLETED_KEY,
-        JSON.stringify(Array.from(completedPromptIds))
-      );
-    } catch (error) {
-      console.error('Error saving completed prompts:', error);
-    }
+    saveToStorage(COMPLETED_KEY, Array.from(completedPromptIds));
   }, [completedPromptIds]);
 
   const recordPerformance = (metrics: PerformanceMetrics) => {
@@ -179,7 +185,7 @@ export function AdaptiveDifficultyProvider({ children }: AdaptiveDifficultyProvi
     hintsUsed: number = 0
   ) => {
     if (!activePrompt || activePrompt.promptId !== promptId) {
-      console.warn('Completing prompt that was not started:', promptId);
+      // Prompt was not started or doesn't match active prompt
       return;
     }
 

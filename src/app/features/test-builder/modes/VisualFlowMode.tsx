@@ -11,7 +11,9 @@ export function VisualFlowMode() {
   const { steps, addStep } = useTestSteps();
   const { selectedStepId, setSelectedStepId } = useStepSelection();
 
-  const handleAddStep = (type: any) => {
+  type StepType = 'navigate' | 'click' | 'fill' | 'select' | 'assert' | 'wait';
+
+  const handleAddStep = (type: StepType) => {
     addStep({
       type,
       action: `New ${type} step`,
@@ -31,7 +33,7 @@ export function VisualFlowMode() {
           />
           <ThemedCardContent>
             <div className="space-y-2">
-              {['navigate', 'click', 'fill', 'select', 'assert', 'wait'].map((type) => (
+              {(['navigate', 'click', 'fill', 'select', 'assert', 'wait'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => handleAddStep(type)}

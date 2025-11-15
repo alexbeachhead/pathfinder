@@ -1,106 +1,72 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TestScenario, CodebaseAnalysis, ScreenshotMetadata } from './types';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// Rate limiting: Gemini free tier allows 15 requests per minute
-// To be safe, we'll add a 4-second delay between requests
-const RATE_LIMIT_DELAY = 4000; // 4 seconds
-const MAX_RETRIES = 3;
-const RETRY_DELAY_BASE = 15000; // 15 seconds base delay for retries
-
-let lastRequestTime = 0;
+import { generateCompletionWithImages, parseAIJsonResponse } from './ai-client';
 
 /**
- * Wait for rate limit delay if needed
- */
-async function waitForRateLimit(): Promise<void> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
-    const waitTime = RATE_LIMIT_DELAY - timeSinceLastRequest;
-    console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-  }
-
-  lastRequestTime = Date.now();
-}
-
-/**
- * Retry logic with exponential backoff
- */
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  retries: number = MAX_RETRIES
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error: any) {
-    // Check if it's a rate limit error (429)
-    if (error.message?.includes('429') || error.message?.includes('quota')) {
-      if (retries > 0) {
-        // Extract retry time from error message if available
-        const retryMatch = error.message.match(/retry in ([\d.]+)s/);
-        const retrySeconds = retryMatch ? parseFloat(retryMatch[1]) : 0;
-        const delay = retrySeconds > 0
-          ? retrySeconds * 1000 + 1000 // Add 1 second buffer
-          : RETRY_DELAY_BASE * (MAX_RETRIES - retries + 1); // Exponential backoff
-
-        console.log(`Rate limit hit. Retrying in ${delay}ms... (${retries} retries left)`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return retryWithBackoff(fn, retries - 1);
-      }
-    }
-    throw error;
-  }
-}
-
-/**
- * Analyze a web page using Gemini with screenshots and code analysis
+ * Analyze a web page using AI with screenshots and code analysis
+ * Uses Gemini as primary with Groq fallback for rate limit handling
  */
 export async function analyzePageForTests(
   screenshots: ScreenshotMetadata[],
   codeAnalysis: CodebaseAnalysis | null,
   url: string
 ): Promise<TestScenario[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-
   const prompt = buildAnalysisPrompt(url, screenshots, codeAnalysis);
   const imageParts = screenshots.map((screenshot) => ({
-    inlineData: {
-      data: screenshot.base64 || '',
-      mimeType: 'image/png',
-    },
+    data: screenshot.base64 || '',
+    mimeType: 'image/png',
   }));
 
   try {
-    // Apply rate limiting and retry logic
-    return await retryWithBackoff(async () => {
-      await waitForRateLimit();
+    const { text, provider } = await generateCompletionWithImages(prompt, imageParts);
+    console.log(`[analyzePageForTests] Using provider: ${provider}`);
 
-      const result = await model.generateContent([prompt, ...imageParts]);
-      const response = await result.response;
-      const text = response.text();
+    // Parse JSON response
+    const parsed = parseAIJsonResponse<unknown>(text);
+    const scenarios = Array.isArray(parsed) ? parsed : (parsed as Record<string, unknown>).scenarios || [];
 
-      // Parse JSON response
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonText = jsonMatch[1] || jsonMatch[0];
-        const parsed = JSON.parse(jsonText);
-        return Array.isArray(parsed) ? parsed : parsed.scenarios || [];
+    if (!Array.isArray(scenarios) || scenarios.length === 0) {
+      console.warn('[analyzePageForTests] No scenarios found in AI response');
+      return [];
+    }
+
+    // Validate and filter scenarios to ensure all required fields are present
+    const validScenarios = scenarios.filter((scenario: unknown) => {
+      const s = scenario as Partial<TestScenario>;
+      const isValid =
+        s.id &&
+        s.name &&
+        s.description &&
+        s.priority &&
+        s.category &&
+        Array.isArray(s.steps) && s.steps.length > 0 &&
+        Array.isArray(s.expectedOutcomes) &&
+        Array.isArray(s.viewports);
+
+      if (!isValid) {
+        console.warn('[analyzePageForTests] Skipping invalid scenario:', {
+          id: s.id,
+          name: s.name,
+          missingFields: {
+            steps: !Array.isArray(s.steps) || s.steps.length === 0,
+            expectedOutcomes: !Array.isArray(s.expectedOutcomes),
+            viewports: !Array.isArray(s.viewports),
+          }
+        });
       }
 
-      throw new Error('Failed to parse Gemini response');
+      return isValid;
     });
+
+    console.log(`[analyzePageForTests] Generated ${scenarios.length} scenarios, ${validScenarios.length} valid`);
+    return validScenarios as TestScenario[];
   } catch (error) {
-    console.error('Gemini analysis error:', error);
+    console.error('[analyzePageForTests] Failed:', error);
     throw new Error(`AI analysis failed: ${(error as Error).message}`);
   }
 }
 
 /**
- * Build the analysis prompt for Gemini
+ * Build the analysis prompt for AI
  */
 function buildAnalysisPrompt(
   url: string,
@@ -129,21 +95,13 @@ Context:
 ${codeInfo}
 
 Your task:
-1. Analyze the provided screenshots to identify all interactive elements (buttons, links, forms, inputs)
-2. Determine critical user flows (navigation, form submission, authentication, search, etc.)
-3. Identify potential edge cases (validation, empty states, error scenarios)
-4. Consider responsive behavior differences across viewports
-5. Spot accessibility concerns where visible
-
-Generate comprehensive Playwright test scenarios that cover:
-- Happy path user flows (critical priority)
-- Form validation and error cases (high priority)
-- Responsive behavior verification (medium priority)
-- Visual regression checkpoints (medium priority)
-- Accessibility checks where applicable (low priority)
+Analyze the screenshots and generate 3-5 COMPLETE Playwright test scenarios covering:
+- Critical user flows (navigation, forms, key interactions)
+- Important edge cases (validation, errors)
+- Visual checkpoints
 
 Output Format:
-Return a JSON array of test scenarios with this structure:
+Return ONLY valid JSON (no markdown, no explanations, no code blocks) with this exact structure:
 {
   "scenarios": [
     {
@@ -156,32 +114,33 @@ Return a JSON array of test scenarios with this structure:
         {
           "action": "navigate|click|fill|assert|screenshot|wait|hover|select",
           "selector": "CSS selector or data-testid",
-          "value": "value for fill/select actions",
+          "value": "value for fill/select actions OR null",
           "description": "What this step does"
         }
       ],
       "expectedOutcomes": ["What should happen after test completes"],
-      "viewports": ["mobile_small", "desktop", etc.]
+      "viewports": ["mobile_small", "desktop"]
     }
   ]
 }
 
-Important:
-- Use data-testid selectors when possible, otherwise use stable CSS selectors
-- Include wait steps before assertions
-- Add screenshot checkpoints for visual validation
-- Cover both success and failure scenarios
-- Be specific in descriptions
+CRITICAL RULES:
+1. Return ONLY valid JSON - no markdown, no text before/after
+2. ALL scenarios MUST be complete with ALL required fields
+3. Every scenario needs: id, name, description, priority, category, steps (array), expectedOutcomes (array), viewports (array)
+4. Every step needs: action, selector, value (or null), description
+5. If you can't complete a scenario, OMIT it - partial scenarios cause errors
+6. Use stable CSS selectors or data-testid
+7. No trailing commas
 
-Generate at least 5-10 meaningful test scenarios based on what you see in the screenshots.`;
+Generate 3-5 complete scenarios. Quality over quantity.`;
 }
 
 /**
  * Simple analysis without screenshots (fallback)
+ * Uses Gemini as primary with Groq fallback for rate limit handling
  */
 export async function analyzeUrlStructure(url: string): Promise<TestScenario[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-
   const prompt = `Generate basic Playwright test scenarios for a website at: ${url}
 
 Create 3-5 fundamental tests covering:
@@ -192,24 +151,16 @@ Create 3-5 fundamental tests covering:
 Return as JSON array matching the TestScenario structure.`;
 
   try {
-    return await retryWithBackoff(async () => {
-      await waitForRateLimit();
+    const { text } = await generateCompletionWithImages(prompt, []);
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonText = jsonMatch[1] || jsonMatch[0];
-        const parsed = JSON.parse(jsonText);
-        return Array.isArray(parsed) ? parsed : parsed.scenarios || [];
-      }
-
+    try {
+      const parsed = parseAIJsonResponse<unknown>(text);
+      const scenarios = Array.isArray(parsed) ? parsed : (parsed as Record<string, unknown>).scenarios || [];
+      return scenarios as TestScenario[];
+    } catch {
       return [];
-    });
-  } catch (error) {
-    console.error('Gemini URL analysis error:', error);
+    }
+  } catch {
     return [];
   }
 }

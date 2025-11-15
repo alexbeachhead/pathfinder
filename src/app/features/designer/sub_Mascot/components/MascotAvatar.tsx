@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MascotConfig, generateMascotSVG, getMascotDescription } from '@/lib/mascot/mascotGenerator';
+import { MascotConfig, generateMascotSVG, getMascotDescription } from '@/app/features/designer/sub_Mascot/lib/mascotGenerator';
 import { useMemo } from 'react';
 
 interface MascotAvatarProps {
@@ -33,15 +33,15 @@ export function MascotAvatar({ config, size = 'md', animate = true, className = 
       y: [-2, 2, -2],
       transition: {
         duration: 2,
-        repeat: Infinity,
-        ease: 'easeInOut',
+        repeat: Infinity as unknown as number,
+        ease: [0.42, 0, 0.58, 1] as any,
       },
     },
     wiggle: {
       rotate: [-3, 3, -3, 0],
       transition: {
         duration: 0.5,
-        ease: 'easeInOut',
+        ease: [0.42, 0, 0.58, 1] as any,
       },
     },
   };

@@ -16,8 +16,12 @@ import {
   Database,
   Cookie,
   Code,
-  Info,
 } from 'lucide-react';
+import {
+  filterPluginsWithTags,
+  groupPluginsByCategory,
+  validatePluginForm,
+} from '../lib/pluginHelpers';
 
 interface PluginActionSelectorProps {
   onSelect: (pluginData: PluginStepData) => void;
@@ -47,29 +51,12 @@ export function PluginActionSelector({ onSelect, onCancel }: PluginActionSelecto
 
   // Filter plugins by search query
   const filteredPlugins = useMemo(() => {
-    if (!searchQuery) return allPlugins;
-
-    const query = searchQuery.toLowerCase();
-    return allPlugins.filter(
-      (plugin) =>
-        plugin.metadata.name.toLowerCase().includes(query) ||
-        plugin.metadata.displayName.toLowerCase().includes(query) ||
-        plugin.metadata.description.toLowerCase().includes(query) ||
-        plugin.metadata.tags?.some((tag) => tag.toLowerCase().includes(query))
-    );
+    return filterPluginsWithTags(allPlugins, searchQuery);
   }, [allPlugins, searchQuery]);
 
   // Group plugins by category
   const pluginsByCategory = useMemo(() => {
-    const categories: Record<string, PluginAction[]> = {};
-    filteredPlugins.forEach((plugin) => {
-      const category = plugin.metadata.category;
-      if (!categories[category]) {
-        categories[category] = [];
-      }
-      categories[category].push(plugin);
-    });
-    return categories;
+    return groupPluginsByCategory(filteredPlugins);
   }, [filteredPlugins]);
 
   const toggleCategory = (category: string) => {
@@ -113,12 +100,7 @@ export function PluginActionSelector({ onSelect, onCancel }: PluginActionSelecto
 
   const validateForm = (): boolean => {
     if (!selectedPlugin) return false;
-
-    return selectedPlugin.parameters.every((param) => {
-      if (!param.required) return true;
-      const value = parameterValues[param.name];
-      return value !== undefined && value !== null && value !== '';
-    });
+    return validatePluginForm(selectedPlugin, parameterValues);
   };
 
   const renderParameterInput = (param: PluginParameter) => {
@@ -277,7 +259,7 @@ export function PluginActionSelector({ onSelect, onCancel }: PluginActionSelecto
               <div key={param.name}>
                 <label className="block mb-1 text-sm font-medium" style={{ color: currentTheme.colors.text.primary }}>
                   {param.label}
-                  {param.required && <span style={{ color: currentTheme.colors.error }}> *</span>}
+                  {param.required && <span style={{ color: '#ff4444' }}> *</span>}
                 </label>
                 {renderParameterInput(param)}
                 {param.description && (

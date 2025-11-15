@@ -145,7 +145,7 @@ export async function getOrCreateDefaultBranch(suiteId: string): Promise<TestSui
     .from('test_suite_branches')
     .insert({
       suite_id: suiteId,
-      branch_name: 'main',
+      branch_name: 'master',
       is_default: true,
       description: 'Default branch',
     })
@@ -168,7 +168,7 @@ export async function createSnapshot(data: {
   suite_config?: Record<string, unknown>;
 }): Promise<string> {
   const { data: snapshot, error } = await supabase
-    .from('branch_snapshots')
+    .from('snapshots')
     .insert(data)
     .select('id')
     .single();

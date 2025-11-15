@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
-import { CheckCircle2, GitBranch } from 'lucide-react';
+import { CheckCircle2, GitBranch, Play, PlusCircle, Sparkles } from 'lucide-react';
 import { CodeLanguage } from '@/lib/types';
-import { CIPipelineWizard } from './CIPipelineWizard';
+import { CIPipelineWizard } from '../sub_CICD/CIPipelineWizard';
 
 interface StepCompleteProps {
   testSuiteName: string;
@@ -31,65 +32,102 @@ export function StepComplete({
   return (
     <>
       <ThemedCard variant="glow">
-        <div className="p-8 text-center space-y-6">
-          <CheckCircle2 className="w-20 h-20 mx-auto" style={{ color: '#22c55e' }} />
-          <div>
-            <h2 className="text-3xl font-bold mb-2" style={{ color: currentTheme.colors.text.primary }}>
-              Test Suite Created!
-            </h2>
-            <p className="text-lg" style={{ color: currentTheme.colors.text.secondary }}>
-              Your test suite &quot;{testSuiteName}&quot; has been saved successfully.
-            </p>
-          </div>
-
-          {/* CI/CD Integration Callout */}
-          <div
-            className="p-4 rounded-lg border-2 border-dashed"
-            style={{
-              borderColor: currentTheme.colors.accent,
-              backgroundColor: `${currentTheme.colors.accent}15`,
+        <div className="p-8 text-center space-y-8">
+          {/* Success Icon with Animation */}
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 200,
+              damping: 15,
+              delay: 0.1,
             }}
           >
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <GitBranch className="w-5 h-5" style={{ color: currentTheme.colors.accent }} />
-              <h3 className="text-lg font-semibold" style={{ color: currentTheme.colors.text.primary }}>
-                Ready for CI/CD?
-              </h3>
-            </div>
-            <p className="text-sm mb-4" style={{ color: currentTheme.colors.text.secondary }}>
-              Generate a ready-to-use GitHub Actions or GitLab CI pipeline for your test suite
+              <CheckCircle2 className="w-24 h-24 mx-auto" style={{ color: '#22c55e' }} />
+          </motion.div>
+
+          {/* Success Message */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h2 className="text-4xl font-bold mb-3" style={{ color: currentTheme.colors.text.primary }}>
+              Test Suite Created!
+            </h2>
+            <p className="text-lg max-w-md mx-auto" style={{ color: currentTheme.colors.text.secondary }}>
+              <span className="font-semibold" style={{ color: currentTheme.colors.accent }}>
+                &quot;{testSuiteName}&quot;
+              </span>{' '}
+              has been saved successfully and is ready to run.
             </p>
+          </motion.div>
+
+            {/* Sparkle effect */}
+            <motion.div
+              className="absolute -top-2 -right-2"
+              animate={{
+                rotate: [0, 360],
+                scale: [1, 1.2, 1],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            >
+              <Sparkles className="w-6 h-6" style={{ color: currentTheme.colors.accent }} />
+            </motion.div>
+          {/* Action Buttons */}
+          <motion.div
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
             <ThemedButton
-              variant="primary"
+              variant="secondary"
+              size="lg"
+              onClick={onReset}
+              data-testid="create-another-btn"
+              leftIcon={<PlusCircle />}
+            >
+              Create Another
+            </ThemedButton>
+            <ThemedButton
+              variant="glow"
               size="lg"
               onClick={() => setShowCIWizard(true)}
               data-testid="generate-ci-pipeline-btn"
+              leftIcon={<GitBranch />}
             >
-              <GitBranch className="w-4 h-4 mr-2" />
               Generate CI/CD Pipeline
             </ThemedButton>
-          </div>
-
-          <div className="flex items-center justify-center gap-4">
-            <ThemedButton variant="secondary" size="lg" onClick={onReset} data-testid="create-another-btn">
-              Create Another
+            <ThemedButton
+              variant="primary"
+              size="lg"
+              onClick={onRunTests}
+              data-testid="run-tests-btn"
+              leftIcon={<Play />}
+            >
+              Run Tests Now
             </ThemedButton>
-            <ThemedButton variant="primary" size="lg" onClick={onRunTests} data-testid="run-tests-btn">
-              Run Tests
-            </ThemedButton>
-          </div>
+          </motion.div>
         </div>
       </ThemedCard>
 
-      {showCIWizard && (
-        <CIPipelineWizard
-          testSuiteName={testSuiteName}
-          targetUrl={targetUrl}
-          codeLanguage={codeLanguage}
-          generatedCode={generatedCode}
-          onClose={() => setShowCIWizard(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showCIWizard && (
+          <CIPipelineWizard
+            testSuiteName={testSuiteName}
+            targetUrl={targetUrl}
+            codeLanguage={codeLanguage}
+            generatedCode={generatedCode}
+            onClose={() => setShowCIWizard(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

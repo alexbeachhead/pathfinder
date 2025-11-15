@@ -92,7 +92,7 @@ export interface ConsoleLog {
 
 // UI Component Types
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'default';
+export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'default' | 'secondary' | 'outline';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 export type CardVariant = 'default' | 'bordered' | 'elevated';

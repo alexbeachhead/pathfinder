@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { STEPS_TO_NL_PROMPT } from '@/prompts/steps-to-nl';
+import { generateCompletion } from '@/lib/ai-client';
 
 export const maxDuration = 30;
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: Request) {
   try {
@@ -17,9 +15,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use lightweight Gemini Flash Lite model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-
     // Convert steps to natural language
     const prompt = STEPS_TO_NL_PROMPT
       .replace('{name}', flow.name || 'Untitled Test')
@@ -27,15 +22,14 @@ export async function POST(request: Request) {
       .replace('{viewport}', flow.viewport || 'Desktop HD (1920x1080)')
       .replace('{steps}', JSON.stringify(flow.steps, null, 2));
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const naturalLanguage = response.text().trim();
+    const { text: naturalLanguage, provider } = await generateCompletion(prompt);
+    console.log(`[steps-to-nl] Used AI provider: ${provider}`);
 
     return NextResponse.json({
-      naturalLanguage,
+      naturalLanguage: naturalLanguage.trim(),
     });
   } catch (error: any) {
-    console.error('Error in steps-to-nl API:', error);
+    console.error('[steps-to-nl] Error in steps-to-nl API:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

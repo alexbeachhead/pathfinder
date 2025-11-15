@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
-import { themes, ThemeVariant } from '@/lib/theme';
+import { themes } from '@/lib/theme';
 
 export function ThemeSwitcher() {
   const { themeId, setTheme, currentTheme } = useTheme();

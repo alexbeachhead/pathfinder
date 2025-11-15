@@ -63,15 +63,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       >
         <div className="container flex items-center justify-between text-sm">
           <p style={{ color: 'var(--theme-text-tertiary)' }}>
-            Pathfinder &copy; 2024
+            Pathfinder &copy; 2025
           </p>
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: 'var(--theme-accent)', boxShadow: '0 0 8px var(--theme-accent)' }}
-            />
-            <span style={{ color: 'var(--theme-text-secondary)' }}>System Ready</span>
-          </div>
         </div>
       </footer>
     </div>

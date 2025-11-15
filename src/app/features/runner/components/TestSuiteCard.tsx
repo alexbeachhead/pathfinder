@@ -13,34 +13,20 @@ interface TestSuiteCardProps {
   isRunning?: boolean;
 }
 
+// Helper function to get status display properties
+function getStatusDisplay(status: 'passed' | 'failed' | 'running' | undefined, accentColor: string, tertiaryColor: string) {
+  const config = {
+    passed: { color: '#22c55e', icon: CheckCircle2, label: 'Passed', className: '' },
+    failed: { color: '#ef4444', icon: XCircle, label: 'Failed', className: '' },
+    running: { color: accentColor, icon: Clock, label: 'Running', className: 'animate-spin' },
+    default: { color: tertiaryColor, icon: Clock, label: 'Unknown', className: '' },
+  };
+
+  return config[status || 'default'];
+}
+
 export function TestSuiteCard({ suite, onRun, isRunning }: TestSuiteCardProps) {
   const { currentTheme } = useTheme();
-
-  const getStatusColor = (status?: 'passed' | 'failed' | 'running') => {
-    switch (status) {
-      case 'passed':
-        return '#22c55e';
-      case 'failed':
-        return '#ef4444';
-      case 'running':
-        return currentTheme.colors.accent;
-      default:
-        return currentTheme.colors.text.tertiary;
-    }
-  };
-
-  const getStatusIcon = (status?: 'passed' | 'failed' | 'running') => {
-    switch (status) {
-      case 'passed':
-        return <CheckCircle2 className="w-4 h-4" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4" />;
-      case 'running':
-        return <Clock className="w-4 h-4 animate-spin" />;
-      default:
-        return <Clock className="w-4 h-4" />;
-    }
-  };
 
   return (
     <motion.div
@@ -87,21 +73,25 @@ export function TestSuiteCard({ suite, onRun, isRunning }: TestSuiteCardProps) {
                   {suite.testCount}
                 </span>
               </div>
-              {suite.lastRun && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span style={{ color: getStatusColor(suite.lastRun.status) }}>
-                      {getStatusIcon(suite.lastRun.status)}
-                    </span>
-                    <span className="text-sm font-medium" style={{ color: getStatusColor(suite.lastRun.status) }}>
-                      {suite.lastRun.status === 'passed' ? 'Passed' : suite.lastRun.status === 'failed' ? 'Failed' : 'Running'}
-                    </span>
-                  </div>
-                  <div className="text-xs" style={{ color: currentTheme.colors.text.tertiary }}>
-                    {suite.lastRun.timestamp} • {suite.lastRun.duration}
-                  </div>
-                </>
-              )}
+              {suite.lastRun && (() => {
+                const statusDisplay = getStatusDisplay(suite.lastRun.status, currentTheme.colors.accent, currentTheme.colors.text.tertiary);
+                const StatusIcon = statusDisplay.icon;
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: statusDisplay.color }}>
+                        <StatusIcon className={`w-4 h-4 ${statusDisplay.className}`} />
+                      </span>
+                      <span className="text-sm font-medium" style={{ color: statusDisplay.color }}>
+                        {statusDisplay.label}
+                      </span>
+                    </div>
+                    <div className="text-xs" style={{ color: currentTheme.colors.text.tertiary }}>
+                      {suite.lastRun.timestamp} • {suite.lastRun.duration}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

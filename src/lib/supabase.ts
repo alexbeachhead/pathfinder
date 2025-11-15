@@ -16,59 +16,83 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Generic database helpers to reduce code duplication
+async function fetchAll<T>(table: string, orderBy: string = 'created_at'): Promise<T[]> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .order(orderBy, { ascending: false });
+
+  if (error) throw error;
+  return data as T[];
+}
+
+async function fetchById<T>(table: string, id: string): Promise<T> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data as T;
+}
+
+async function insertOne<T>(table: string, record: unknown): Promise<T> {
+  const { data, error } = await supabase
+    .from(table)
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as T;
+}
+
+async function updateOne<T>(table: string, id: string, updates: unknown): Promise<T> {
+  const { data, error } = await supabase
+    .from(table)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as T;
+}
+
+async function deleteOne(table: string, id: string): Promise<void> {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // Test Suites Operations
 export const testSuiteOperations = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('test_suites')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data as TestSuite[];
+    return fetchAll<TestSuite>('test_suites');
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from('test_suites')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as TestSuite;
+    return fetchById<TestSuite>('test_suites', id);
   },
 
   async create(suite: Omit<TestSuite, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('test_suites')
-      .insert(suite)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestSuite;
+    return insertOne<TestSuite>('test_suites', suite);
   },
 
   async update(id: string, updates: Partial<TestSuite>) {
-    const { data, error } = await supabase
-      .from('test_suites')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestSuite;
+    return updateOne<TestSuite>('test_suites', id, {
+      ...updates,
+      updated_at: new Date().toISOString()
+    });
   },
 
   async delete(id: string) {
-    const { error } = await supabase
-      .from('test_suites')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    return deleteOne('test_suites', id);
   },
 };
 
@@ -90,25 +114,11 @@ export const testRunOperations = {
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from('test_runs')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as TestRun;
+    return fetchById<TestRun>('test_runs', id);
   },
 
   async create(run: Omit<TestRun, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('test_runs')
-      .insert(run)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestRun;
+    return insertOne<TestRun>('test_runs', run);
   },
 
   async updateStatus(
@@ -126,15 +136,7 @@ export const testRunOperations = {
       updates.completed_at = new Date().toISOString();
     }
 
-    const { data, error } = await supabase
-      .from('test_runs')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestRun;
+    return updateOne<TestRun>('test_runs', id, updates);
   },
 };
 
@@ -152,14 +154,7 @@ export const testResultOperations = {
   },
 
   async create(result: Omit<TestResult, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('test_results')
-      .insert(result)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestResult;
+    return insertOne<TestResult>('test_results', result);
   },
 };
 
@@ -177,14 +172,7 @@ export const aiAnalysisOperations = {
   },
 
   async create(analysis: Omit<AIAnalysis, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('ai_analyses')
-      .insert(analysis)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as AIAnalysis;
+    return insertOne<AIAnalysis>('ai_analyses', analysis);
   },
 };
 
@@ -204,14 +192,7 @@ export const testCodeOperations = {
   },
 
   async create(code: Omit<TestCode, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('test_code')
-      .insert(code)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as TestCode;
+    return insertOne<TestCode>('test_code', code);
   },
 };
 

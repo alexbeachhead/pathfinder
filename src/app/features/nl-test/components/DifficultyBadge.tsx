@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-import { Badge } from '@/components/ui/Badge';
 import { DifficultyLevel, getDifficultyColor, getDifficultyLabel } from '../lib/difficultyScoring';
 
 interface DifficultyBadgeProps {

@@ -480,8 +480,8 @@ export function RegressionDashboard({ testRunId, suiteId }: RegressionDashboardP
                       <h3 className="font-medium" style={{ color: currentTheme.colors.text.primary }}>
                         {regression.testName}
                       </h3>
-                      <Badge variant="secondary">{regression.viewport}</Badge>
-                      {regression.stepName && <Badge variant="outline">{regression.stepName}</Badge>}
+                      <Badge variant="info">{regression.viewport}</Badge>
+                      {regression.stepName && <Badge variant="default">{regression.stepName}</Badge>}
                       {regression.isSignificant && (
                         <Badge variant="error">Significant</Badge>
                       )}

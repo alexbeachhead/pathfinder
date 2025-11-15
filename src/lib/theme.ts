@@ -1,4 +1,4 @@
-export type ThemeVariant = 'cyber' | 'crimson' | 'slate';
+export type ThemeVariant = 'cyber' | 'crimson' | 'slate' | 'light';
 
 export interface Theme {
   id: ThemeVariant;
@@ -125,6 +125,37 @@ export const themes: Record<ThemeVariant, Theme> = {
     effects: {
       blur: 'backdrop-blur-sm',
       opacity: 'bg-opacity-10',
+    },
+  },
+  light: {
+    id: 'light',
+    name: 'Notion Light',
+    description: 'Clean and minimal light theme inspired by Notion',
+    colors: {
+      primary: '#37352f', // Notion dark gray
+      primaryDark: '#1f1e1a', // darker gray
+      secondary: '#787774', // medium gray
+      accent: '#2383e2', // Notion blue
+      background: '#ffffff', // pure white
+      surface: '#f7f6f3', // light beige/gray
+      surfaceHover: '#efeeeb', // slightly darker beige
+      border: 'rgba(55, 53, 47, 0.09)',
+      borderHover: 'rgba(55, 53, 47, 0.16)',
+      text: {
+        primary: '#37352f', // dark gray text
+        secondary: '#787774', // medium gray text
+        tertiary: '#9b9a97', // light gray text
+      },
+      gradient: {
+        from: '#ffffff', // white
+        to: '#f7f6f3', // light beige
+      },
+      shadow: 'rgba(15, 15, 15, 0.1)',
+      glow: '0 0 20px rgba(35, 131, 226, 0.15)',
+    },
+    effects: {
+      blur: 'backdrop-blur-sm',
+      opacity: 'bg-opacity-80',
     },
   },
 };

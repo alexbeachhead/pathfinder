@@ -5,7 +5,7 @@ import { useTheme } from '@/lib/stores/appStore';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { Eye, Loader2, AlertTriangle } from 'lucide-react';
 import { RecentTest } from '../lib/mockData';
-import { MascotAvatar } from '@/components/ui/MascotAvatar';
+import { MascotAvatar } from '@/app/features/designer/sub_Mascot/components/MascotAvatar';
 import { useState } from 'react';
 
 export interface AnomalyData {

@@ -37,133 +37,64 @@ export function generateDemoTestSuite(): TestSuite {
 }
 
 /**
+ * Helper to create a console log with timestamp
+ */
+function createLog(type: ConsoleLog['type'], message: string): ConsoleLog {
+  return {
+    type,
+    message,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
  * Generate streaming demo logs that simulate a real test run
  */
 export function* generateDemoLogs(): Generator<ConsoleLog[], void, unknown> {
   const logSequences: ConsoleLog[][] = [
     [
-      {
-        type: 'info',
-        message: 'Starting demo test execution for suite: Welcome Demo',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'info',
-        message: 'Target URL: https://playwright.dev',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'info',
-        message: 'Viewports: iPhone 12, iPad, Tablet',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', 'Starting demo test execution for suite: Welcome Demo'),
+      createLog('info', 'Target URL: https://playwright.dev'),
+      createLog('info', 'Viewports: iPhone 12, iPad, Tablet'),
     ],
     [
-      {
-        type: 'info',
-        message: 'Initializing Playwright browser...',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', 'Initializing Playwright browser...'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 1] iPhone 12: Starting test',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [iPhone 12] Navigating to https://playwright.dev',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 1] iPhone 12: Starting test'),
+      createLog('log', '  [iPhone 12] Navigating to https://playwright.dev'),
     ],
     [
-      {
-        type: 'log',
-        message: '  [iPhone 12] Page loaded successfully',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [iPhone 12] Capturing screenshot...',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('log', '  [iPhone 12] Page loaded successfully'),
+      createLog('log', '  [iPhone 12] Capturing screenshot...'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 1] iPhone 12: PASS (1247ms)',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 1] iPhone 12: PASS (1247ms)'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 2] iPad: Starting test',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [iPad] Navigating to https://playwright.dev',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 2] iPad: Starting test'),
+      createLog('log', '  [iPad] Navigating to https://playwright.dev'),
     ],
     [
-      {
-        type: 'log',
-        message: '  [iPad] Page loaded successfully',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [iPad] Capturing screenshot...',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('log', '  [iPad] Page loaded successfully'),
+      createLog('log', '  [iPad] Capturing screenshot...'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 2] iPad: PASS (1156ms)',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 2] iPad: PASS (1156ms)'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 3] Tablet: Starting test',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [Tablet] Navigating to https://playwright.dev',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 3] Tablet: Starting test'),
+      createLog('log', '  [Tablet] Navigating to https://playwright.dev'),
     ],
     [
-      {
-        type: 'log',
-        message: '  [Tablet] Page loaded successfully',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        type: 'log',
-        message: '  [Tablet] Capturing screenshot...',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('log', '  [Tablet] Page loaded successfully'),
+      createLog('log', '  [Tablet] Capturing screenshot...'),
     ],
     [
-      {
-        type: 'info',
-        message: '[Viewport 3] Tablet: PASS (1089ms)',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', '[Viewport 3] Tablet: PASS (1089ms)'),
     ],
     [
-      {
-        type: 'info',
-        message: 'Test execution completed. 3 passed, 0 failed.',
-        timestamp: new Date().toISOString(),
-      },
+      createLog('info', 'Test execution completed. 3 passed, 0 failed.'),
     ],
   ];
 

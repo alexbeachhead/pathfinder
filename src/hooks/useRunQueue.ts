@@ -33,6 +33,13 @@ interface UseRunQueueReturn {
 }
 
 /**
+ * Helper function to handle errors consistently
+ */
+function handleError(err: unknown, fallbackMessage: string): string {
+  return err instanceof Error ? err.message : fallbackMessage;
+}
+
+/**
  * Hook for managing test run queue
  * Provides queue state, statistics, and operations
  */
@@ -65,9 +72,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
       setJobs(jobsData);
       setStats(statsData);
       setConcurrencyLimitState(limitData);
-    } catch (err: any) {
-      console.error('Failed to fetch queue data:', err);
-      setError(err.message || 'Failed to load queue data');
+    } catch (err) {
+      setError(handleError(err, 'Failed to load queue data'));
     } finally {
       setIsLoading(false);
     }
@@ -112,9 +118,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
         const jobId = await addToQueue(suiteId, config, priority);
         await fetchQueueData(); // Refresh after adding
         return jobId;
-      } catch (err: any) {
-        console.error('Failed to add job to queue:', err);
-        setError(err.message || 'Failed to add job');
+      } catch (err) {
+        setError(handleError(err, 'Failed to add job'));
         throw err;
       }
     },
@@ -128,9 +133,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
         setError(null);
         await cancelQueueJob(jobId);
         await fetchQueueData(); // Refresh after canceling
-      } catch (err: any) {
-        console.error('Failed to cancel job:', err);
-        setError(err.message || 'Failed to cancel job');
+      } catch (err) {
+        setError(handleError(err, 'Failed to cancel job'));
         throw err;
       }
     },
@@ -144,9 +148,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
         setError(null);
         await retryQueueJob(jobId);
         await fetchQueueData(); // Refresh after retrying
-      } catch (err: any) {
-        console.error('Failed to retry job:', err);
-        setError(err.message || 'Failed to retry job');
+      } catch (err) {
+        setError(handleError(err, 'Failed to retry job'));
         throw err;
       }
     },
@@ -165,9 +168,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
         setError(null);
         await updateQueueJobStatus(jobId, status, runId, errorMessage);
         await fetchQueueData(); // Refresh after updating
-      } catch (err: any) {
-        console.error('Failed to update job status:', err);
-        setError(err.message || 'Failed to update job status');
+      } catch (err) {
+        setError(handleError(err, 'Failed to update job status'));
         throw err;
       }
     },
@@ -181,9 +183,8 @@ export function useRunQueue(options: UseRunQueueOptions = {}): UseRunQueueReturn
         setError(null);
         await setConcurrencyLimit(limit);
         setConcurrencyLimitState(limit);
-      } catch (err: any) {
-        console.error('Failed to set concurrency limit:', err);
-        setError(err.message || 'Failed to set concurrency limit');
+      } catch (err) {
+        setError(handleError(err, 'Failed to set concurrency limit'));
         throw err;
       }
     },

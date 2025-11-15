@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/lib/stores/appStore';
-import { FlowStep } from '../lib/flowTypes';
-import { PaletteItem } from '../lib/palettes';
+import { FlowStep, PaletteItem } from '../lib/flowTypes';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   GripVertical,
@@ -41,6 +40,27 @@ interface FlowCanvasProps {
   onReorderStep: (stepId: string, newOrder: number) => void;
 }
 
+interface ConfigBadgeProps {
+  label: string;
+  value: string;
+}
+
+function ConfigBadge({ label, value }: ConfigBadgeProps) {
+  const { currentTheme } = useTheme();
+
+  return (
+    <span
+      className="text-xs px-2 py-1 rounded"
+      style={{
+        backgroundColor: currentTheme.colors.background,
+        color: currentTheme.colors.text.secondary,
+      }}
+    >
+      {label}: {value}
+    </span>
+  );
+}
+
 export function FlowCanvas({
   steps,
   selectedStepId,
@@ -67,7 +87,7 @@ export function FlowCanvas({
       const item: PaletteItem = JSON.parse(itemData);
       onAddStep(item, index);
     } catch (error) {
-      console.error('Failed to parse dropped item:', error);
+      // Failed to parse dropped item - silently ignore
     }
   };
 
@@ -202,10 +222,9 @@ export function FlowCanvas({
                         }}
                       >
                         {IconComponent && (
-                          <IconComponent
-                            className="w-5 h-5"
-                            style={{ color: currentTheme.colors.accent }}
-                          />
+                          <div style={{ color: currentTheme.colors.accent }}>
+                            <IconComponent className="w-5 h-5" />
+                          </div>
                         )}
                       </div>
 
@@ -225,39 +244,9 @@ export function FlowCanvas({
 
                         {/* Display key config values */}
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {step.config.url && (
-                            <span
-                              className="text-xs px-2 py-1 rounded"
-                              style={{
-                                backgroundColor: currentTheme.colors.background,
-                                color: currentTheme.colors.text.secondary,
-                              }}
-                            >
-                              URL: {step.config.url}
-                            </span>
-                          )}
-                          {step.config.selector && (
-                            <span
-                              className="text-xs px-2 py-1 rounded"
-                              style={{
-                                backgroundColor: currentTheme.colors.background,
-                                color: currentTheme.colors.text.secondary,
-                              }}
-                            >
-                              Selector: {step.config.selector}
-                            </span>
-                          )}
-                          {step.config.value && (
-                            <span
-                              className="text-xs px-2 py-1 rounded"
-                              style={{
-                                backgroundColor: currentTheme.colors.background,
-                                color: currentTheme.colors.text.secondary,
-                              }}
-                            >
-                              Value: {step.config.value}
-                            </span>
-                          )}
+                          {step.config.url && <ConfigBadge label="URL" value={step.config.url} />}
+                          {step.config.selector && <ConfigBadge label="Selector" value={step.config.selector} />}
+                          {step.config.value && <ConfigBadge label="Value" value={step.config.value} />}
                         </div>
                       </div>
 

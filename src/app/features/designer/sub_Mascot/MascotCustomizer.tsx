@@ -2,7 +2,7 @@
 
 import { useTheme } from '@/lib/stores/appStore';
 import { MascotConfig } from '@/lib/types';
-import { MascotAvatar } from '@/components/ui/MascotAvatar';
+import { MascotAvatar } from '@/app/features/designer/sub_Mascot/components/MascotAvatar';
 import { Palette } from 'lucide-react';
 
 interface MascotCustomizerProps {

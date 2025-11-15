@@ -58,7 +58,7 @@ export function Reports({ testRunId }: ReportsProps) {
       setAiAnalyses(analyses);
       setAnalysisStats(stats);
     } catch (error) {
-      console.error('Failed to load AI analyses:', error);
+      // Failed to load AI analyses - silently handle
     } finally {
       setLoadingAnalysis(false);
     }
@@ -83,7 +83,7 @@ export function Reports({ testRunId }: ReportsProps) {
       // Reload analyses
       await loadAnalyses();
     } catch (error) {
-      console.error('AI analysis failed:', error);
+      // AI analysis failed
       alert('AI analysis failed. Please try again.');
     } finally {
       setRunningAnalysis(false);

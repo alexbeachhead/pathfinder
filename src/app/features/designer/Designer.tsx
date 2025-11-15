@@ -4,29 +4,20 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
-import { StepIndicator } from './components/StepIndicator';
 import { StepSetup } from './components/StepSetup';
 import { StepAnalysis } from './components/StepAnalysis';
 import { StepReview } from './components/StepReview';
 import { StepComplete } from './components/StepComplete';
-import { ScreenshotMetadata, TestScenario, MascotConfig, CodeLanguage, PreviewMode } from '@/lib/types';
+import { SuiteControls } from './components/SuiteControls';
+import { ScreenshotMetadata, TestScenario, MascotConfig, CodeLanguage, PreviewMode, TestSuite } from '@/lib/types';
 import { generateTestCode } from '@/lib/playwright/generateTestCode';
-import { createTestSuite, saveTestCode } from '@/lib/supabase/testSuites';
+import { getTestSuites, getTestSuite, getLatestTestCode } from '@/lib/supabase/testSuites';
+import { getSuiteScreenshots, getTestScenarios } from '@/lib/supabase/suiteAssets';
 import { AlertCircle } from 'lucide-react';
-import { MascotAvatar } from '@/components/ui/MascotAvatar';
-import { inferMascotType } from '@/lib/mascot/mascotGenerator';
-import { BranchPicker } from './components/BranchPicker';
-import { getOrCreateDefaultBranch, createSnapshot } from '@/lib/supabase/branches';
+import { MascotAvatar } from '@/app/features/designer/sub_Mascot/components/MascotAvatar';
+import { inferMascotType } from '@/app/features/designer/sub_Mascot/lib/mascotGenerator';
 
 type WorkflowStep = 'setup' | 'analyzing' | 'review' | 'complete';
-
-const STEPS = [
-  { id: 'setup', label: 'Setup', description: 'Configure test suite' },
-  { id: 'analyzing', label: 'Analyzing', description: 'AI analysis in progress' },
-  { id: 'review', label: 'Review', description: 'Review and edit' },
-  { id: 'complete', label: 'Complete', description: 'Save and run' },
-];
-
 export function Designer() {
   const { currentTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('setup');
@@ -50,6 +41,12 @@ export function Designer() {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [previewMode, setPreviewMode] = useState<PreviewMode>('lightweight');
 
+  // Suite management state
+  const [availableSuites, setAvailableSuites] = useState<TestSuite[]>([]);
+  const [selectedSuiteId, setSelectedSuiteId] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isLoadingSuites, setIsLoadingSuites] = useState(false);
+
   // Load preview mode preference from localStorage
   useEffect(() => {
     const savedPreviewMode = localStorage.getItem('pathfinder-preview-mode');
@@ -72,6 +69,77 @@ export function Designer() {
       }
     }
   }, [testSuiteName, description]);
+
+  // Load available test suites on mount
+  useEffect(() => {
+    loadSuites();
+  }, []);
+
+  const loadSuites = async () => {
+    try {
+      setIsLoadingSuites(true);
+      const suites = await getTestSuites();
+      setAvailableSuites(suites);
+    } catch (err) {
+      // Failed to load test suites - silently handle
+    } finally {
+      setIsLoadingSuites(false);
+    }
+  };
+
+  const loadSuiteData = async (suiteId: string) => {
+    try {
+      setIsLoadingSuites(true);
+      setError(null);
+
+      // Load suite metadata
+      const suite = await getTestSuite(suiteId);
+      if (!suite) {
+        throw new Error('Suite not found');
+      }
+
+      // Load latest test code
+      const code = await getLatestTestCode(suiteId);
+
+      // Load screenshots
+      const suiteScreenshots = await getSuiteScreenshots(suiteId);
+      setScreenshots(suiteScreenshots);
+
+      // Load test scenarios
+      const suiteScenarios = await getTestScenarios(suiteId);
+      setScenarios(suiteScenarios);
+
+      // Populate form with suite data
+      setTestSuiteName(suite.name);
+      setTargetUrl(suite.target_url);
+      setDescription(suite.description || '');
+      if (suite.mascot_config) {
+        setMascotConfig(suite.mascot_config);
+      }
+
+      if (code) {
+        setGeneratedCode(code.code);
+        setCodeLanguage(code.language);
+        // Skip directly to review step if code exists
+        setCurrentStep('review');
+      } else {
+        // No code yet, stay in setup
+        setCurrentStep('setup');
+      }
+
+      setSelectedSuiteId(suiteId);
+    } catch (err) {
+      // Failed to load suite data
+      setError((err as Error).message);
+    } finally {
+      setIsLoadingSuites(false);
+    }
+  };
+
+  const handleNewSuite = () => {
+    resetWorkflow();
+    setSelectedSuiteId('');
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -113,12 +181,16 @@ export function Designer() {
 
         if (complexityRes.ok) {
           const complexityData = await complexityRes.json();
-          setEstimatedDurationMs(complexityData.analysis.estimatedDurationMs);
-          console.log('Site complexity analysis:', complexityData.analysis);
+          const baseEstimation = complexityData.analysis.estimatedDurationMs;
+          // If lightweight mode, reduce estimation to 1/3 of original
+          const adjustedEstimation = previewMode === 'lightweight' ? Math.floor(baseEstimation / 3) : baseEstimation;
+          setEstimatedDurationMs(adjustedEstimation);
         }
       } catch (error) {
-        console.warn('Complexity analysis failed, using default estimation:', error);
-        setEstimatedDurationMs(300000); // Fallback to 5 minutes
+        // Complexity analysis failed, using default estimation
+        // Fallback: 5 minutes for full, ~1.67 minutes for lightweight
+        const fallbackEstimation = previewMode === 'lightweight' ? 100000 : 300000;
+        setEstimatedDurationMs(fallbackEstimation);
       }
 
       setProgressMessage(previewMode === 'lightweight' ? 'Capturing lightweight previews...' : 'Capturing full screenshots...');
@@ -155,58 +227,32 @@ export function Designer() {
       }
 
       const analysisData = await analysisRes.json();
-      setScenarios(analysisData.scenarios);
+      const receivedScenarios = analysisData.scenarios || [];
+      setScenarios(receivedScenarios);
       setProgress(70);
 
       setProgressMessage('Generating Playwright test code...');
-      const code = generateTestCode(testSuiteName, targetUrl, analysisData.scenarios, codeLanguage);
+      const code = generateTestCode(testSuiteName, targetUrl, receivedScenarios, codeLanguage);
       setGeneratedCode(code);
       setProgress(100);
 
       setTimeout(() => setCurrentStep('review'), 500);
     } catch (err) {
-      console.error('Analysis error:', err);
+      // Analysis error
       setError((err as Error).message);
       setCurrentStep('setup');
     }
   };
 
-  const handleSaveTests = async () => {
-    try {
-      const suiteId = await createTestSuite({
-        name: testSuiteName,
-        target_url: targetUrl,
-        description,
-        mascot_config: mascotConfig,
-      });
+  const handleSaveComplete = (suiteId: string, branchId: string) => {
+    setSavedSuiteId(suiteId);
+    setSelectedSuiteId(suiteId);
+    setSelectedBranchId(branchId);
+    setCurrentStep('complete');
+  };
 
-      // Ensure default branch exists
-      const defaultBranch = await getOrCreateDefaultBranch(suiteId);
-      setSelectedBranchId(defaultBranch.id);
-
-      // Save test code with language preference
-      await saveTestCode(suiteId, generatedCode, codeLanguage);
-
-      // Create snapshot for the branch
-      const { data: latestCode } = await fetch(`/api/supabase/test-code/${suiteId}/latest`).then(r => r.json()).catch(() => ({ data: null }));
-      if (latestCode) {
-        await createSnapshot({
-          branch_id: defaultBranch.id,
-          test_code_id: latestCode.id,
-          suite_config: {
-            name: testSuiteName,
-            target_url: targetUrl,
-            description,
-          },
-        });
-      }
-
-      setSavedSuiteId(suiteId);
-      setCurrentStep('complete');
-    } catch (err) {
-      console.error('Save error:', err);
-      setError((err as Error).message);
-    }
+  const handleSaveError = (errorMessage: string) => {
+    setError(errorMessage);
   };
 
   const resetWorkflow = () => {
@@ -229,37 +275,39 @@ export function Designer() {
 
   return (
     <div className="p-8 space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
-        {testSuiteName && (
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            data-testid="designer-mascot"
-          >
-            <MascotAvatar config={mascotConfig} size="xl" animate={true} />
-          </motion.div>
-        )}
-        <div>
-          <h1 className="text-4xl font-bold mb-2" style={{ color: currentTheme.colors.text.primary }}>
-            Visual Test Designer
-          </h1>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
           {testSuiteName && (
-            <motion.p
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-lg"
-              style={{ color: currentTheme.colors.text.secondary }}
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              data-testid="designer-mascot"
             >
-              {testSuiteName}
-            </motion.p>
+              <MascotAvatar config={mascotConfig} size="xl" animate={true} />
+            </motion.div>
           )}
+          <div>
+              <motion.p
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-lg"
+                style={{ color: currentTheme.colors.text.secondary }}
+              >
+                {testSuiteName || 'New Test Suite'}
+              </motion.p>
+          </div>
         </div>
+        {/* Suite Management Controls */}
+        <SuiteControls
+          availableSuites={availableSuites}
+          selectedSuiteId={selectedSuiteId}
+          sortOrder={sortOrder}
+          isLoadingSuites={isLoadingSuites}
+          onSelectSuite={loadSuiteData}
+          onNewSuite={handleNewSuite}
+        />
       </motion.div>
-
-      {/* UI Improvement 1: Step Indicator */}
-      <StepIndicator steps={STEPS} currentStep={currentStep} />
-
       {error && (
         <ThemedCard variant="bordered">
           <div className="p-4 flex items-start gap-3">
@@ -302,9 +350,14 @@ export function Designer() {
           generatedCode={generatedCode}
           codeLanguage={codeLanguage}
           targetUrl={targetUrl}
+          testSuiteName={testSuiteName}
+          description={description}
+          mascotConfig={mascotConfig}
           onCodeChange={setGeneratedCode}
-          onSave={handleSaveTests}
+          onSaveComplete={handleSaveComplete}
+          onSaveError={handleSaveError}
           onReset={resetWorkflow}
+          onReloadSuites={loadSuites}
         />
       )}
 

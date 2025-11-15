@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NL_TO_STEPS_PROMPT, EXTRACT_URL_PROMPT } from '@/prompts/nl-to-steps';
+import { generateCompletion, parseAIJsonResponse } from '@/lib/ai-client';
 
 export const maxDuration = 30;
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: Request) {
   try {
@@ -17,24 +15,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use lightweight Gemini Flash Lite model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-
     // Convert natural language to steps
-    const prompt = NL_TO_STEPS_PROMPT.replace('{description}', description);
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    const stepsPrompt = NL_TO_STEPS_PROMPT.replace('{description}', description);
+    const { text: stepsResponse, provider: stepsProvider } = await generateCompletion(stepsPrompt);
+    console.log(`[nl-to-steps] Used AI provider for steps: ${stepsProvider}`);
 
     // Parse JSON response
     let steps = [];
     try {
-      // Extract JSON from markdown code blocks if present
-      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\[[\s\S]*\]/);
-      const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-      steps = JSON.parse(jsonText);
+      steps = parseAIJsonResponse<any[]>(stepsResponse);
     } catch (parseError) {
-      console.error('Failed to parse Gemini response:', text);
+      console.error('[nl-to-steps] Failed to parse Gemini response:', stepsResponse);
       return NextResponse.json(
         { error: 'Failed to parse AI response' },
         { status: 500 }
@@ -43,8 +34,9 @@ export async function POST(request: Request) {
 
     // Extract URL
     const urlPrompt = EXTRACT_URL_PROMPT.replace('{description}', description);
-    const urlResult = await model.generateContent(urlPrompt);
-    const targetUrl = urlResult.response.text().trim();
+    const { text: urlResponse, provider: urlProvider } = await generateCompletion(urlPrompt);
+    console.log(`[nl-to-steps] Used AI provider for URL: ${urlProvider}`);
+    const targetUrl = urlResponse.trim();
 
     // Generate test name
     const testName = generateTestName(description);
@@ -55,7 +47,7 @@ export async function POST(request: Request) {
       testName,
     });
   } catch (error: any) {
-    console.error('Error in nl-to-steps API:', error);
+    console.error('[nl-to-steps] Error in nl-to-steps API:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

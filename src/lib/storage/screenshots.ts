@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { STORAGE_CONFIG } from '../config';
 
 export interface ScreenshotMetadata {
   testRunId: string;
@@ -21,13 +22,22 @@ export async function uploadScreenshot(
     // Check if bucket exists first
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
 
-    if (bucketError || !buckets?.find(b => b.name === 'test-screenshots')) {
-      console.warn('Screenshot storage bucket not found. Screenshots will not be uploaded.');
-      return ''; // Return empty string instead of failing
+    if (bucketError) {
+      console.error('Failed to list storage buckets:', bucketError.message);
+      console.error('Check your Supabase connection and permissions');
+      return '';
+    }
+
+    const bucketExists = buckets?.find(b => b.name === STORAGE_CONFIG.screenshotBucket);
+    if (!bucketExists) {
+      console.error(`Screenshot storage bucket '${STORAGE_CONFIG.screenshotBucket}' not found.`);
+      console.error(`Available buckets:`, buckets?.map(b => b.name).join(', ') || 'none');
+      console.error(`Please create the bucket in Supabase Storage or update STORAGE_CONFIG.screenshotBucket in src/lib/config.ts`);
+      return '';
     }
 
     const { data, error } = await supabase.storage
-      .from('test-screenshots')
+      .from(STORAGE_CONFIG.screenshotBucket)
       .upload(fileName, screenshot, {
         contentType: 'image/png',
         cacheControl: '3600',
@@ -41,9 +51,10 @@ export async function uploadScreenshot(
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('test-screenshots')
+      .from(STORAGE_CONFIG.screenshotBucket)
       .getPublicUrl(fileName);
 
+    console.log(`Screenshot uploaded successfully: ${fileName}`);
     return urlData.publicUrl;
   } catch (error) {
     console.warn('Failed to upload screenshot:', error);
@@ -81,7 +92,7 @@ export async function deleteTestRunScreenshots(testRunId: string): Promise<void>
   try {
     // List all files in the test run folder
     const { data: files, error: listError } = await supabase.storage
-      .from('test-screenshots')
+      .from(STORAGE_CONFIG.screenshotBucket)
       .list(testRunId);
 
     if (listError) {
@@ -95,7 +106,7 @@ export async function deleteTestRunScreenshots(testRunId: string): Promise<void>
     // Delete all files
     const filePaths = files.map(file => `${testRunId}/${file.name}`);
     const { error: deleteError } = await supabase.storage
-      .from('test-screenshots')
+      .from(STORAGE_CONFIG.screenshotBucket)
       .remove(filePaths);
 
     if (deleteError) {
@@ -113,7 +124,7 @@ export async function deleteTestRunScreenshots(testRunId: string): Promise<void>
 export async function getTestRunScreenshots(testRunId: string): Promise<string[]> {
   try {
     const { data: files, error } = await supabase.storage
-      .from('test-screenshots')
+      .from(STORAGE_CONFIG.screenshotBucket)
       .list(testRunId, {
         limit: 1000,
         sortBy: { column: 'created_at', order: 'asc' },
@@ -130,7 +141,7 @@ export async function getTestRunScreenshots(testRunId: string): Promise<string[]
     // Get public URLs for all files
     const urls = files.map(file => {
       const { data } = supabase.storage
-        .from('test-screenshots')
+        .from(STORAGE_CONFIG.screenshotBucket)
         .getPublicUrl(`${testRunId}/${file.name}`);
       return data.publicUrl;
     });

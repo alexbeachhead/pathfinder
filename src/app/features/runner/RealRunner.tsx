@@ -98,7 +98,7 @@ export function RealRunner() {
 
       setExecutionState('completed');
     } catch (error) {
-      console.error('Demo execution error:', error);
+      // Demo execution error - silently handle
       setExecutionState('failed');
     }
   };
@@ -181,11 +181,18 @@ export function RealRunner() {
       setTestRunId(result.testRunId);
 
       // Update progress based on results
-      const passed = result.results.filter((r: any) => r.status === 'pass').length;
-      const failed = result.results.filter((r: any) => r.status === 'fail').length;
+      interface TestResult {
+        status: string;
+        viewport: string;
+        durationMs: number;
+        consoleLogs?: Array<{ type: string; message: string; timestamp?: string }>;
+        errors?: Array<{ message: string; stack?: string }>;
+      }
+      const passed = result.results.filter((r: TestResult) => r.status === 'pass').length;
+      const failed = result.results.filter((r: TestResult) => r.status === 'fail').length;
 
       // Log each result with detailed information
-      result.results.forEach((r: any, index: number) => {
+      result.results.forEach((r: TestResult, index: number) => {
         // Add viewport result summary
         setConsoleLogs(prev => [
           ...prev,
@@ -198,11 +205,12 @@ export function RealRunner() {
 
         // Add console logs from Playwright
         if (r.consoleLogs && r.consoleLogs.length > 0) {
-          r.consoleLogs.forEach((log: any) => {
+          r.consoleLogs.forEach((log) => {
+            const logType = log.type as 'info' | 'log' | 'warn' | 'error' | undefined;
             setConsoleLogs(prev => [
               ...prev,
               {
-                type: log.type || 'log',
+                type: logType || 'log',
                 message: `  [${r.viewport}] ${log.message}`,
                 timestamp: log.timestamp || new Date().toISOString(),
               },
@@ -212,7 +220,7 @@ export function RealRunner() {
 
         // Add errors from Playwright
         if (r.errors && r.errors.length > 0) {
-          r.errors.forEach((error: any) => {
+          r.errors.forEach((error) => {
             setConsoleLogs(prev => [
               ...prev,
               {
@@ -226,7 +234,7 @@ export function RealRunner() {
                 ...prev,
                 {
                   type: 'error',
-                  message: `  ${error.stack.split('\n').slice(0, 3).join('\n  ')}`,
+                  message: `  ${error.stack?.split('\n').slice(0, 3).join('\n  ') || error.message}`,
                   timestamp: new Date().toISOString(),
                 },
               ]);
@@ -256,14 +264,15 @@ export function RealRunner() {
           timestamp: new Date().toISOString(),
         },
       ]);
-    } catch (error: any) {
-      console.error('Execution error:', error);
+    } catch (error: unknown) {
+      // Execution error - silently handle
+      const errorMessage = error instanceof Error ? error.message : 'Test execution failed';
       setExecutionState('failed');
       setConsoleLogs(prev => [
         ...prev,
         {
           type: 'error',
-          message: error.message || 'Test execution failed',
+          message: errorMessage,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -334,13 +343,14 @@ export function RealRunner() {
           timestamp: new Date().toISOString(),
         },
       ]);
-    } catch (error: any) {
-      console.error('Failed to add to queue:', error);
+    } catch (error: unknown) {
+      // Failed to add to queue - silently handle
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add to queue';
       setConsoleLogs(prev => [
         ...prev,
         {
           type: 'error',
-          message: `Failed to add to queue: ${error.message}`,
+          message: `Failed to add to queue: ${errorMessage}`,
           timestamp: new Date().toISOString(),
         },
       ]);

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
-import { Image, SplitSquareHorizontal, Check, X, Loader2 } from 'lucide-react';
+import { Image, Check, X, Loader2 } from 'lucide-react';
 import { useLazyImage } from '../lib/useLazyImage';
 
 interface ScreenshotComparisonProps {
@@ -15,6 +15,50 @@ interface ScreenshotComparisonProps {
   currentUrl?: string;
   diffUrl?: string;
 }
+
+// Helper component for view mode buttons
+const ViewModeButton = ({
+  mode,
+  currentMode,
+  onClick,
+  theme,
+  label
+}: {
+  mode: 'side-by-side' | 'diff' | 'overlay';
+  currentMode: 'side-by-side' | 'diff' | 'overlay';
+  onClick: () => void;
+  theme: any;
+  label: string;
+}) => (
+  <button
+    onClick={onClick}
+    className="text-xs px-3 py-1 rounded transition-colors"
+    style={{
+      backgroundColor: currentMode === mode ? theme.colors.primary : theme.colors.surface,
+      color: currentMode === mode ? '#ffffff' : theme.colors.text.secondary,
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: theme.colors.border,
+    }}
+  >
+    {label}
+  </button>
+);
+
+// Helper component for section headers
+const SectionHeader = ({ theme, label }: { theme: any; label: string }) => (
+  <div className="p-2 text-center text-xs font-medium"
+    style={{
+      backgroundColor: theme.colors.surface,
+      color: theme.colors.text.secondary,
+      borderBottomWidth: '1px',
+      borderBottomStyle: 'solid',
+      borderBottomColor: theme.colors.border,
+    }}
+  >
+    {label}
+  </div>
+);
 
 /**
  * UI Improvement 1: Interactive visual regression comparison
@@ -67,45 +111,27 @@ export function ScreenshotComparison({
         icon={<Image className="w-5 h-5" />}
         action={
           <div className="flex items-center gap-2">
-            <button
+            <ViewModeButton
+              mode="side-by-side"
+              currentMode={viewMode}
               onClick={() => setViewMode('side-by-side')}
-              className="text-xs px-3 py-1 rounded transition-colors"
-              style={{
-                backgroundColor: viewMode === 'side-by-side' ? currentTheme.colors.primary : currentTheme.colors.surface,
-                color: viewMode === 'side-by-side' ? '#ffffff' : currentTheme.colors.text.secondary,
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: currentTheme.colors.border,
-              }}
-            >
-              Side-by-side
-            </button>
-            <button
+              theme={currentTheme}
+              label="Side-by-side"
+            />
+            <ViewModeButton
+              mode="diff"
+              currentMode={viewMode}
               onClick={() => setViewMode('diff')}
-              className="text-xs px-3 py-1 rounded transition-colors"
-              style={{
-                backgroundColor: viewMode === 'diff' ? currentTheme.colors.primary : currentTheme.colors.surface,
-                color: viewMode === 'diff' ? '#ffffff' : currentTheme.colors.text.secondary,
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: currentTheme.colors.border,
-              }}
-            >
-              Diff
-            </button>
-            <button
+              theme={currentTheme}
+              label="Diff"
+            />
+            <ViewModeButton
+              mode="overlay"
+              currentMode={viewMode}
               onClick={() => setViewMode('overlay')}
-              className="text-xs px-3 py-1 rounded transition-colors"
-              style={{
-                backgroundColor: viewMode === 'overlay' ? currentTheme.colors.primary : currentTheme.colors.surface,
-                color: viewMode === 'overlay' ? '#ffffff' : currentTheme.colors.text.secondary,
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: currentTheme.colors.border,
-              }}
-            >
-              Overlay
-            </button>
+              theme={currentTheme}
+              label="Overlay"
+            />
           </div>
         }
       />
@@ -172,17 +198,7 @@ export function ScreenshotComparison({
               <div className="grid grid-cols-2 gap-0">
                 {/* Baseline */}
                 <div>
-                  <div className="p-2 text-center text-xs font-medium"
-                    style={{
-                      backgroundColor: currentTheme.colors.surface,
-                      color: currentTheme.colors.text.secondary,
-                      borderBottomWidth: '1px',
-                      borderBottomStyle: 'solid',
-                      borderBottomColor: currentTheme.colors.border,
-                    }}
-                  >
-                    Baseline
-                  </div>
+                  <SectionHeader theme={currentTheme} label="Baseline" />
                   <div ref={baseline.ref} className="aspect-video flex items-center justify-center relative"
                     style={{ backgroundColor: baselineColor }}
                     data-testid="screenshot-baseline-container"
@@ -213,17 +229,7 @@ export function ScreenshotComparison({
 
                 {/* Current */}
                 <div style={{ borderLeftWidth: '1px', borderLeftStyle: 'solid', borderLeftColor: currentTheme.colors.border }}>
-                  <div className="p-2 text-center text-xs font-medium"
-                    style={{
-                      backgroundColor: currentTheme.colors.surface,
-                      color: currentTheme.colors.text.secondary,
-                      borderBottomWidth: '1px',
-                      borderBottomStyle: 'solid',
-                      borderBottomColor: currentTheme.colors.border,
-                    }}
-                  >
-                    Current
-                  </div>
+                  <SectionHeader theme={currentTheme} label="Current" />
                   <div ref={current.ref} className="aspect-video flex items-center justify-center relative"
                     style={{ backgroundColor: currentColor }}
                     data-testid="screenshot-current-container"
@@ -256,17 +262,7 @@ export function ScreenshotComparison({
 
             {viewMode === 'diff' && (
               <div>
-                <div className="p-2 text-center text-xs font-medium"
-                  style={{
-                    backgroundColor: currentTheme.colors.surface,
-                    color: currentTheme.colors.text.secondary,
-                    borderBottomWidth: '1px',
-                    borderBottomStyle: 'solid',
-                    borderBottomColor: currentTheme.colors.border,
-                  }}
-                >
-                  Difference Highlight
-                </div>
+                <SectionHeader theme={currentTheme} label="Difference Highlight" />
                 <div ref={diff.ref} className="aspect-video flex items-center justify-center relative"
                   style={{ backgroundColor: baselineColor }}
                   data-testid="screenshot-diff-container"
@@ -310,17 +306,7 @@ export function ScreenshotComparison({
 
             {viewMode === 'overlay' && (
               <div>
-                <div className="p-2 text-center text-xs font-medium"
-                  style={{
-                    backgroundColor: currentTheme.colors.surface,
-                    color: currentTheme.colors.text.secondary,
-                    borderBottomWidth: '1px',
-                    borderBottomStyle: 'solid',
-                    borderBottomColor: currentTheme.colors.border,
-                  }}
-                >
-                  Overlay Comparison
-                </div>
+                <SectionHeader theme={currentTheme} label="Overlay Comparison" />
                 <div className="aspect-video flex items-center justify-center relative"
                   style={{ backgroundColor: baselineColor }}
                   data-testid="screenshot-overlay-container"

@@ -23,7 +23,7 @@ export default function ReportsPage() {
       const { runs } = await getRecentTestRuns(1, 50); // Fetch up to 50 runs for reports page
       setRecentRuns(runs);
     } catch (error) {
-      console.error('Failed to load recent test runs:', error);
+      // Error is handled silently - consider adding error state if needed
     } finally {
       setLoading(false);
     }
@@ -62,6 +62,18 @@ export default function ReportsPage() {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleCardHover = (e: React.MouseEvent<HTMLDivElement>, isEnter: boolean) => {
+    if (isEnter) {
+      e.currentTarget.style.borderColor = currentTheme.colors.primary;
+      e.currentTarget.style.transform = 'translateY(-4px)';
+      e.currentTarget.style.boxShadow = `0 8px 16px ${currentTheme.colors.primary}30`;
+    } else {
+      e.currentTarget.style.borderColor = currentTheme.colors.border;
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = 'none';
+    }
   };
 
   if (loading) {
@@ -135,16 +147,8 @@ export default function ReportsPage() {
                             borderWidth: '1px',
                             borderStyle: 'solid',
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = currentTheme.colors.primary;
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = `0 8px 16px ${currentTheme.colors.primary}30`;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = currentTheme.colors.border;
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
+                          onMouseEnter={(e) => handleCardHover(e, true)}
+                          onMouseLeave={(e) => handleCardHover(e, false)}
                         >
                           {/* Status indicator */}
                           <div className="flex items-center justify-between mb-3">

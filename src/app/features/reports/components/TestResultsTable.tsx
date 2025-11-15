@@ -10,6 +10,7 @@ import { CheckCircle2, XCircle, Minus, Monitor, Tablet, Smartphone, AlertCircle,
 import { CreateTicketModal } from './CreateTicketModal';
 import { RootCauseAnalysisModal } from './RootCauseAnalysisModal';
 import { IssueTrackerType } from '@/lib/issueTrackers/types';
+import { TestResult } from '@/lib/types';
 
 interface TestResultsTableProps {
   results: TestResultWithDetails[];
@@ -23,6 +24,46 @@ interface TicketLink {
   ticketKey: string;
   trackerType: IssueTrackerType;
 }
+
+// Helper functions extracted for reusability
+const getStatusIcon = (status: 'pass' | 'fail' | 'skipped') => {
+  switch (status) {
+    case 'pass':
+      return <CheckCircle2 className="w-4 h-4" style={{ color: '#22c55e' }} />;
+    case 'fail':
+      return <XCircle className="w-4 h-4" style={{ color: '#ef4444' }} />;
+    case 'skipped':
+      return <Minus className="w-4 h-4" style={{ color: '#6b7280' }} />;
+  }
+};
+
+const getStatusColor = (status: 'pass' | 'fail' | 'skipped') => {
+  switch (status) {
+    case 'pass':
+      return '#22c55e';
+    case 'fail':
+      return '#ef4444';
+    case 'skipped':
+      return '#6b7280';
+  }
+};
+
+const getViewportIcon = (viewport: 'mobile' | 'tablet' | 'desktop') => {
+  switch (viewport) {
+    case 'desktop':
+      return <Monitor className="w-4 h-4" />;
+    case 'tablet':
+      return <Tablet className="w-4 h-4" />;
+    case 'mobile':
+      return <Smartphone className="w-4 h-4" />;
+  }
+};
+
+const formatDuration = (ms?: number) => {
+  if (!ms) return '-';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+};
 
 export function TestResultsTable({ results, testSuiteName = 'Test Suite', targetUrl = 'https://example.com' }: TestResultsTableProps) {
   const { currentTheme } = useTheme();
@@ -58,45 +99,6 @@ export function TestResultsTable({ results, testSuiteName = 'Test Suite', target
 
   const getTicketForResult = (resultId: string): TicketLink | undefined => {
     return ticketLinks.find((link) => link.resultId === resultId);
-  };
-
-  const getStatusIcon = (status: 'pass' | 'fail' | 'skipped') => {
-    switch (status) {
-      case 'pass':
-        return <CheckCircle2 className="w-4 h-4" style={{ color: '#22c55e' }} />;
-      case 'fail':
-        return <XCircle className="w-4 h-4" style={{ color: '#ef4444' }} />;
-      case 'skipped':
-        return <Minus className="w-4 h-4" style={{ color: currentTheme.colors.text.tertiary }} />;
-    }
-  };
-
-  const getStatusColor = (status: 'pass' | 'fail' | 'skipped') => {
-    switch (status) {
-      case 'pass':
-        return '#22c55e';
-      case 'fail':
-        return '#ef4444';
-      case 'skipped':
-        return currentTheme.colors.text.tertiary;
-    }
-  };
-
-  const getViewportIcon = (viewport: 'mobile' | 'tablet' | 'desktop') => {
-    switch (viewport) {
-      case 'desktop':
-        return <Monitor className="w-4 h-4" />;
-      case 'tablet':
-        return <Tablet className="w-4 h-4" />;
-      case 'mobile':
-        return <Smartphone className="w-4 h-4" />;
-    }
-  };
-
-  const formatDuration = (ms?: number) => {
-    if (!ms) return '-';
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(2)}s`;
   };
 
   // Group results by test name
@@ -290,7 +292,7 @@ export function TestResultsTable({ results, testSuiteName = 'Test Suite', target
         <RootCauseAnalysisModal
           isOpen={isRootCauseModalOpen}
           onClose={() => setIsRootCauseModalOpen(false)}
-          testResult={selectedFailureResult}
+          testResult={selectedFailureResult as unknown as TestResult}
         />
       )}
     </ThemedCard>

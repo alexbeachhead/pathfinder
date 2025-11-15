@@ -3,10 +3,7 @@ import {
   FailureContext,
   SimilarFailure,
   RootCauseAnalysis,
-  ProbableCause,
-  RemediationSuggestion,
 } from '@/lib/ai/rootCauseAnalysis';
-import { saveRootCauseAnalysis, storeFailureEmbedding } from '@/lib/supabase/rootCauseAnalysis';
 
 /**
  * API Route: Analyze root cause of test failure using LLM
@@ -55,7 +52,6 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('OpenAI API error:', error);
       throw new Error('Failed to analyze root cause');
     }
 
@@ -76,7 +72,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ analysis });
   } catch (error) {
-    console.error('Error analyzing root cause:', error);
     return NextResponse.json(
       { error: 'Failed to analyze root cause' },
       { status: 500 }

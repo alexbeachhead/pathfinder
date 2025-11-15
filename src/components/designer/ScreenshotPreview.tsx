@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ScreenshotMetadata } from '@/lib/types';
@@ -54,11 +55,15 @@ export function ScreenshotPreview({
                 onClick={() => setSelectedScreenshot(screenshot)}
               >
                 {/* Screenshot Image */}
-                <img
-                  src={`data:image/png;base64,${screenshot.base64}`}
-                  alt={screenshot.viewportName}
-                  className="w-full h-48 object-cover object-top transition-transform group-hover:scale-105"
-                />
+                <div className="relative w-full h-48 overflow-hidden">
+                  <Image
+                    src={`data:image/png;base64,${screenshot.base64}`}
+                    alt={screenshot.viewportName}
+                    fill
+                    className="object-cover object-top transition-transform group-hover:scale-105"
+                    unoptimized // Required for base64 data URIs
+                  />
+                </div>
 
                 {/* Overlay */}
                 <div
@@ -160,16 +165,22 @@ export function ScreenshotPreview({
 
               {/* Image */}
               <div className="p-4">
-                <img
-                  src={`data:image/png;base64,${selectedScreenshot.base64}`}
-                  alt={selectedScreenshot.viewportName}
-                  className="w-full rounded-lg"
-                  style={{
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: currentTheme.colors.border,
-                  }}
-                />
+                <div className="relative w-full" style={{ minHeight: '400px' }}>
+                  <Image
+                    src={`data:image/png;base64,${selectedScreenshot.base64}`}
+                    alt={selectedScreenshot.viewportName}
+                    width={selectedScreenshot.width}
+                    height={selectedScreenshot.height}
+                    className="w-full rounded-lg"
+                    style={{
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: currentTheme.colors.border,
+                      height: 'auto',
+                    }}
+                    unoptimized // Required for base64 data URIs
+                  />
+                </div>
               </div>
             </motion.div>
           </motion.div>

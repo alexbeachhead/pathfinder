@@ -16,6 +16,8 @@
     "@types/jszip": "^3.4.0",
     "framer-motion": "^12.23.24",
     "glob": "^11.0.3",
+    "groq-sdk": "^0.35.0",
+    "jsonrepair": "^3.13.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.553.0",
     "next": "16.0.3",
@@ -24,11 +26,13 @@
     "pngjs": "^7.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "slim-select": "^3.1.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "better-sqlite3": "^12.4.1",

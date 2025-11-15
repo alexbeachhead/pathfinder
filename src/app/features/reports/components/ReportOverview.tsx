@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
 import { ReportData } from '../lib/mockData';
-import { CheckCircle2, XCircle, Clock, TrendingUp, Monitor } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Monitor } from 'lucide-react';
+import { getPassRateColor } from '../lib/reportHelpers';
 
 interface ReportOverviewProps {
   data: ReportData;
@@ -75,7 +76,7 @@ export function ReportOverview({ data }: ReportOverviewProps) {
                     cy="48"
                     r="40"
                     fill="none"
-                    stroke={summary.passRate >= 80 ? '#22c55e' : summary.passRate >= 50 ? '#eab308' : '#ef4444'}
+                    stroke={getPassRateColor(summary.passRate)}
                     strokeWidth="8"
                     strokeDasharray={`${2 * Math.PI * 40}`}
                     initial={{ strokeDashoffset: 2 * Math.PI * 40 }}

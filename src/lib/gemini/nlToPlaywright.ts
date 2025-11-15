@@ -15,7 +15,7 @@ export interface NLTestResponse {
 }
 
 export const NL_MODEL_CONFIG = {
-  model: 'gemini-2.0-flash-exp',
+  model: 'gemini-flash-latest',
   temperature: 0.7,
   maxOutputTokens: 2048,
   topP: 0.95,

@@ -4,7 +4,6 @@ import { useTheme } from '@/lib/stores/appStore';
 import { PALETTE_ITEMS, PALETTE_CATEGORIES, getPaletteItemsByCategory } from '../lib/palettes';
 import { PaletteItem } from '../lib/flowTypes';
 import {
-  ArrowRight,
   MousePointer,
   Type,
   List,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  ArrowRight,
   MousePointer,
   Type,
   List,
@@ -29,6 +27,66 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 interface StepPaletteProps {
   onSelectItem: (item: PaletteItem) => void;
+}
+
+interface PaletteItemCardProps {
+  item: PaletteItem;
+  categoryColor: string;
+  onDragStart: (e: React.DragEvent, item: PaletteItem) => void;
+  onSelect: (item: PaletteItem) => void;
+}
+
+function PaletteItemCard({ item, categoryColor, onDragStart, onSelect }: PaletteItemCardProps) {
+  const { currentTheme } = useTheme();
+  const IconComponent = iconMap[item.icon];
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, item)}
+      onClick={() => onSelect(item)}
+      className="p-3 rounded cursor-move transition-all hover:scale-[1.02]"
+      style={{
+        backgroundColor: currentTheme.colors.surface,
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: currentTheme.colors.border,
+      }}
+      data-testid={`palette-item-${item.type}`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="flex-shrink-0 w-8 h-8 rounded flex items-center justify-center"
+          style={{
+            backgroundColor: categoryColor + '20',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: categoryColor + '40',
+          }}
+        >
+          {IconComponent && (
+            <div style={{ color: categoryColor }}>
+              <IconComponent className="w-4 h-4" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-sm font-medium truncate"
+            style={{ color: currentTheme.colors.text.primary }}
+          >
+            {item.label}
+          </p>
+          <p
+            className="text-xs truncate"
+            style={{ color: currentTheme.colors.text.tertiary }}
+          >
+            {item.description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function StepPalette({ onSelectItem }: StepPaletteProps) {
@@ -64,59 +122,15 @@ export function StepPalette({ onSelectItem }: StepPaletteProps) {
             </p>
 
             <div className="grid grid-cols-1 gap-2">
-              {items.map(item => {
-                const IconComponent = iconMap[item.icon];
-
-                return (
-                  <div
-                    key={item.type}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, item)}
-                    onClick={() => onSelectItem(item)}
-                    className="p-3 rounded cursor-move transition-all hover:scale-[1.02]"
-                    style={{
-                      backgroundColor: currentTheme.colors.surface,
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: currentTheme.colors.border,
-                    }}
-                    data-testid={`palette-item-${item.type}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="flex-shrink-0 w-8 h-8 rounded flex items-center justify-center"
-                        style={{
-                          backgroundColor: category.color + '20',
-                          borderWidth: '1px',
-                          borderStyle: 'solid',
-                          borderColor: category.color + '40',
-                        }}
-                      >
-                        {IconComponent && (
-                          <IconComponent
-                            className="w-4 h-4"
-                            style={{ color: category.color }}
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-sm font-medium truncate"
-                          style={{ color: currentTheme.colors.text.primary }}
-                        >
-                          {item.label}
-                        </p>
-                        <p
-                          className="text-xs truncate"
-                          style={{ color: currentTheme.colors.text.tertiary }}
-                        >
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {items.map(item => (
+                <PaletteItemCard
+                  key={item.type}
+                  item={item}
+                  categoryColor={category.color}
+                  onDragStart={handleDragStart}
+                  onSelect={onSelectItem}
+                />
+              ))}
             </div>
           </div>
         );

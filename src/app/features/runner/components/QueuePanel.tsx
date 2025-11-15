@@ -10,7 +10,6 @@ import {
   ListChecks,
   X,
   RotateCcw,
-  Trash2,
   ChevronDown,
   ChevronUp,
   Settings,
@@ -22,6 +21,30 @@ import { formatDuration } from '../lib/testExecution';
 interface QueuePanelProps {
   suiteId?: string;
   onViewRun?: (runId: string) => void;
+}
+
+// Helper functions for queue status display
+function getStatusColor(status: string, themeColors: { primary: string; text: { tertiary: string } }) {
+  const colors = {
+    queued: '#f59e0b',
+    running: themeColors.primary,
+    completed: '#22c55e',
+    failed: '#ef4444',
+    retrying: '#8b5cf6',
+    cancelled: themeColors.text.tertiary,
+    default: themeColors.text.tertiary,
+  };
+  return colors[status as keyof typeof colors] || colors.default;
+}
+
+function getStatusIcon(status: string) {
+  const icons = {
+    queued: <Clock className="w-4 h-4" />,
+    running: <Play className="w-4 h-4 animate-pulse" />,
+    retrying: <RotateCcw className="w-4 h-4 animate-spin" />,
+    default: <ListChecks className="w-4 h-4" />,
+  };
+  return icons[status as keyof typeof icons] || icons.default;
 }
 
 export function QueuePanel({ suiteId, onViewRun }: QueuePanelProps) {
@@ -37,40 +60,8 @@ export function QueuePanel({ suiteId, onViewRun }: QueuePanelProps) {
     try {
       await setConcurrency(tempConcurrency);
       setShowSettings(false);
-    } catch (err) {
-      console.error('Failed to set concurrency:', err);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'queued':
-        return '#f59e0b';
-      case 'running':
-        return currentTheme.colors.primary;
-      case 'completed':
-        return '#22c55e';
-      case 'failed':
-        return '#ef4444';
-      case 'retrying':
-        return '#8b5cf6';
-      case 'cancelled':
-        return currentTheme.colors.text.tertiary;
-      default:
-        return currentTheme.colors.text.tertiary;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'queued':
-        return <Clock className="w-4 h-4" />;
-      case 'running':
-        return <Play className="w-4 h-4 animate-pulse" />;
-      case 'retrying':
-        return <RotateCcw className="w-4 h-4 animate-spin" />;
-      default:
-        return <ListChecks className="w-4 h-4" />;
+    } catch {
+      // Error setting concurrency - silently handle
     }
   };
 
@@ -221,7 +212,7 @@ export function QueuePanel({ suiteId, onViewRun }: QueuePanelProps) {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span style={{ color: getStatusColor(job.status) }}>
+                            <span style={{ color: getStatusColor(job.status, currentTheme.colors) }}>
                               {getStatusIcon(job.status)}
                             </span>
                             <span

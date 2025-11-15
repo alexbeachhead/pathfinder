@@ -26,6 +26,7 @@ npm run lint        # Run ESLint
 NEXT_PUBLIC_SUPABASE_URL       # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY  # Supabase anonymous key
 GEMINI_API_KEY                 # Google Gemini API key (server-side only)
+GROQ_API_KEY                   # Groq API key for fallback (server-side only)
 ```
 
 ## Architecture Overview
@@ -36,7 +37,7 @@ GEMINI_API_KEY                 # Google Gemini API key (server-side only)
 - **Zustand** for state management (replaced Context API)
 - **Supabase** for database, storage, and real-time subscriptions
 - **Playwright 1.56** for browser automation
-- **Gemini AI** for test generation and analysis
+- **Gemini AI** (primary) and **Groq AI** (fallback) for test generation and analysis
 - **Tailwind CSS 4** with custom design system
 - **Framer Motion** for animations
 

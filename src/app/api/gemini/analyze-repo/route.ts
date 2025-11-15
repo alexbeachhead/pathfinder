@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ANALYZE_REPO_STRUCTURE_PROMPT, SUGGEST_NEXT_TEST_PROMPT } from '@/prompts/test-recommendations';
 import { supabase } from '@/lib/supabase';
+import { generateCompletion, parseAIJsonResponse } from '@/lib/ai-client';
 
 export const maxDuration = 60;
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: Request) {
   try {
@@ -18,16 +16,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch project details
+    // Fetch test project details
     const { data: project, error: projectError } = await supabase
-      .from('projects')
+      .from('test_projects')
       .select('*')
       .eq('id', projectId)
       .single();
 
     if (projectError || !project) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Test project not found' },
         { status: 404 }
       );
     }
@@ -43,11 +41,9 @@ export async function POST(request: Request) {
     const { data: testRuns } = await supabase
       .from('test_runs')
       .select('id, status, created_at, suite_id')
-      .in('suite_id', testSuites?.map(s => s.id) || [])
+      .in('suite_id', testSuites?.map(s => (s as any).id) || [])
       .order('created_at', { ascending: false })
       .limit(20);
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
     if (analysisType === 'recommendations') {
       // Generate test recommendations
@@ -59,17 +55,15 @@ export async function POST(request: Request) {
         .replace('{projectDescription}', project.description || 'No description')
         .replace('{existingTests}', existingTestsSummary);
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const { text: aiResponse, provider } = await generateCompletion(prompt);
+      console.log(`[analyze-repo] Used AI provider: ${provider}`);
 
       // Parse JSON response
       let recommendations = [];
       try {
-        const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\[[\s\S]*\]/);
-        const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-        recommendations = JSON.parse(jsonText);
+        recommendations = parseAIJsonResponse<any[]>(aiResponse);
       } catch (parseError) {
-        console.error('Failed to parse recommendations:', text);
+        console.error('[analyze-repo] Failed to parse recommendations:', aiResponse);
         return NextResponse.json(
           { error: 'Failed to parse AI recommendations' },
           { status: 500 }
@@ -94,16 +88,14 @@ export async function POST(request: Request) {
         .replace('{failedTests}', `${failedRuns} out of ${totalRuns} recent runs failed`)
         .replace('{trends}', 'Recent activity shows focus on UI testing');
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const { text: aiResponse, provider } = await generateCompletion(prompt);
+      console.log(`[analyze-repo next-test] Used AI provider: ${provider}`);
 
       let suggestion = null;
       try {
-        const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
-        const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-        suggestion = JSON.parse(jsonText);
+        suggestion = parseAIJsonResponse<any>(aiResponse);
       } catch (parseError) {
-        console.error('Failed to parse suggestion:', text);
+        console.error('[analyze-repo] Failed to parse suggestion:', aiResponse);
       }
 
       return NextResponse.json({ suggestion });
@@ -111,7 +103,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 });
   } catch (error: unknown) {
-    console.error('Error in analyze-repo API:', error);
+    console.error('[analyze-repo] Error in analyze-repo API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       { error: errorMessage },

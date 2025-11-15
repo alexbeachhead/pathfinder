@@ -145,30 +145,35 @@ export function updatePerformanceStats(
 }
 
 /**
+ * Calculate average from metrics array using provided extractor function
+ */
+function calculateAverage<T>(
+  items: T[],
+  extractor: (item: T) => number,
+  defaultValue: number = 0
+): number {
+  if (items.length === 0) return defaultValue;
+  const sum = items.reduce((acc, item) => acc + extractor(item), 0);
+  return sum / items.length;
+}
+
+/**
  * Calculate average accuracy from recent performance
  */
 function calculateAverageAccuracy(metrics: PerformanceMetrics[]): number {
-  if (metrics.length === 0) return 0;
-
-  const sum = metrics.reduce((acc, m) => acc + m.accuracy, 0);
-  return sum / metrics.length;
+  return calculateAverage(metrics, m => m.accuracy, 0);
 }
 
 /**
  * Calculate average time ratio (actual/estimated)
  */
 function calculateAverageTimeRatio(metrics: PerformanceMetrics[]): number {
-  if (metrics.length === 0) return 1;
-
   const completed = metrics.filter(m => m.completed && m.duration);
-  if (completed.length === 0) return 1;
-
-  const sum = completed.reduce((acc, m) => {
-    const ratio = m.duration! / m.estimatedDuration;
-    return acc + ratio;
-  }, 0);
-
-  return sum / completed.length;
+  return calculateAverage(
+    completed,
+    m => m.duration! / m.estimatedDuration,
+    1
+  );
 }
 
 /**
@@ -274,8 +279,8 @@ export function getPerformanceTrend(
 
   if (older.length < windowSize) return 'stable';
 
-  const recentAvg = recent.reduce((sum, s) => sum + s.accuracy, 0) / recent.length;
-  const olderAvg = older.reduce((sum, s) => sum + s.accuracy, 0) / older.length;
+  const recentAvg = calculateAverage(recent, s => s.accuracy);
+  const olderAvg = calculateAverage(older, s => s.accuracy);
 
   const difference = recentAvg - olderAvg;
 

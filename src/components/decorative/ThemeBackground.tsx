@@ -2,6 +2,7 @@
 
 import { useTheme } from '@/lib/stores/appStore';
 import { motion } from 'framer-motion';
+import { Theme } from '@/lib/theme';
 
 export function ThemeBackground() {
   const { themeId, currentTheme } = useTheme();
@@ -22,32 +23,72 @@ export function ThemeBackground() {
   );
 }
 
+// Helper to render grid background
+function GridBackground({
+  opacity,
+  color,
+  lineWidth,
+  gridSize
+}: {
+  opacity: string;
+  color: string;
+  lineWidth: string;
+  gridSize: string;
+}) {
+  return (
+    <div
+      className={`absolute inset-0 ${opacity}`}
+      style={{
+        backgroundImage: `
+          linear-gradient(${color} ${lineWidth}, transparent ${lineWidth}),
+          linear-gradient(90deg, ${color} ${lineWidth}, transparent ${lineWidth})
+        `,
+        backgroundSize: gridSize,
+      }}
+    />
+  );
+}
+
+// Helper to render corner SVG decoration
+function CornerDecoration({
+  position,
+  rotation,
+  primaryColor,
+  accentColor
+}: {
+  position: string;
+  rotation: string;
+  primaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className={`absolute ${position} w-32 h-32 opacity-20 ${rotation}`}>
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 0 20 L 20 20 L 20 0" stroke={primaryColor} strokeWidth="2" />
+        <circle cx="20" cy="20" r="3" fill={accentColor} />
+      </svg>
+    </div>
+  );
+}
+
 // Cyber Blueprint Background
-function CyberBackground({ theme }: { theme: any }) {
+function CyberBackground({ theme }: { theme: Theme }) {
   return (
     <>
       {/* Blueprint grid - fine lines */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(${theme.colors.primary}30 1px, transparent 1px),
-            linear-gradient(90deg, ${theme.colors.primary}30 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-        }}
+      <GridBackground
+        opacity="opacity-20"
+        color={`${theme.colors.primary}30`}
+        lineWidth="1px"
+        gridSize="40px 40px"
       />
 
       {/* Blueprint grid - major lines */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(${theme.colors.primary}50 2px, transparent 2px),
-            linear-gradient(90deg, ${theme.colors.primary}50 2px, transparent 2px)
-          `,
-          backgroundSize: '200px 200px',
-        }}
+      <GridBackground
+        opacity="opacity-10"
+        color={`${theme.colors.primary}50`}
+        lineWidth="2px"
+        gridSize="200px 200px"
       />
 
       {/* Animated scan line */}
@@ -68,19 +109,19 @@ function CyberBackground({ theme }: { theme: any }) {
       />
 
       {/* Corner decorations */}
-      <div className="absolute top-8 left-8 w-32 h-32 opacity-20">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 0 20 L 20 20 L 20 0" stroke={theme.colors.primary} strokeWidth="2" />
-          <circle cx="20" cy="20" r="3" fill={theme.colors.accent} />
-        </svg>
-      </div>
+      <CornerDecoration
+        position="top-8 left-8"
+        rotation=""
+        primaryColor={theme.colors.primary}
+        accentColor={theme.colors.accent}
+      />
 
-      <div className="absolute bottom-8 right-8 w-32 h-32 opacity-20 rotate-180">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 0 20 L 20 20 L 20 0" stroke={theme.colors.primary} strokeWidth="2" />
-          <circle cx="20" cy="20" r="3" fill={theme.colors.accent} />
-        </svg>
-      </div>
+      <CornerDecoration
+        position="bottom-8 right-8"
+        rotation="rotate-180"
+        primaryColor={theme.colors.primary}
+        accentColor={theme.colors.accent}
+      />
 
       {/* Vignette effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-gray-950/50 via-transparent to-gray-950/50" />
@@ -89,8 +130,46 @@ function CyberBackground({ theme }: { theme: any }) {
   );
 }
 
+// Helper for corner accent lines
+interface CornerLinePosition {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+  width: string;
+  height: string;
+}
+
+function CornerAccentLines({ theme }: { theme: Theme }) {
+  const positions: CornerLinePosition[] = [
+    { top: 0, left: 0, width: '200px', height: '1px' },
+    { top: 0, left: 0, width: '1px', height: '200px' },
+    { top: 0, right: 0, width: '200px', height: '1px' },
+    { top: 0, right: 0, width: '1px', height: '200px' },
+    { bottom: 0, left: 0, width: '200px', height: '1px' },
+    { bottom: 0, left: 0, width: '1px', height: '200px' },
+    { bottom: 0, right: 0, width: '200px', height: '1px' },
+    { bottom: 0, right: 0, width: '1px', height: '200px' },
+  ];
+
+  return (
+    <>
+      {positions.map((pos, i) => (
+        <div
+          key={i}
+          className="absolute opacity-20"
+          style={{
+            ...pos,
+            background: `linear-gradient(${i % 2 === 0 ? '90deg' : '180deg'}, ${theme.colors.primary}, transparent)`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 // Crimson Dark Background
-function CrimsonBackground({ theme }: { theme: any }) {
+function CrimsonBackground({ theme }: { theme: Theme }) {
   return (
     <>
       {/* Subtle gradient overlay */}
@@ -102,37 +181,15 @@ function CrimsonBackground({ theme }: { theme: any }) {
       />
 
       {/* Minimal grid - very subtle */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: `
-            linear-gradient(${theme.colors.primary}60 1px, transparent 1px),
-            linear-gradient(90deg, ${theme.colors.primary}60 1px, transparent 1px)
-          `,
-          backgroundSize: '80px 80px',
-        }}
+      <GridBackground
+        opacity="opacity-5"
+        color={`${theme.colors.primary}60`}
+        lineWidth="1px"
+        gridSize="80px 80px"
       />
 
       {/* Corner accent lines */}
-      {[
-        { top: 0, left: 0, width: '200px', height: '1px' },
-        { top: 0, left: 0, width: '1px', height: '200px' },
-        { top: 0, right: 0, width: '200px', height: '1px' },
-        { top: 0, right: 0, width: '1px', height: '200px' },
-        { bottom: 0, left: 0, width: '200px', height: '1px' },
-        { bottom: 0, left: 0, width: '1px', height: '200px' },
-        { bottom: 0, right: 0, width: '200px', height: '1px' },
-        { bottom: 0, right: 0, width: '1px', height: '200px' },
-      ].map((pos, i) => (
-        <div
-          key={i}
-          className="absolute opacity-20"
-          style={{
-            ...pos,
-            background: `linear-gradient(${i % 2 === 0 ? '90deg' : '180deg'}, ${theme.colors.primary}, transparent)`,
-          }}
-        />
-      ))}
+      <CornerAccentLines theme={theme} />
 
       {/* Vignette */}
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-black/20 to-black/50" />
@@ -141,7 +198,14 @@ function CrimsonBackground({ theme }: { theme: any }) {
 }
 
 // Golden Slate Background
-function SlateBackground({ theme }: { theme: any }) {
+function SlateBackground({ theme }: { theme: Theme }) {
+  const cornerPositions: Array<{ top?: string; left?: string; right?: string; bottom?: string }> = [
+    { top: '3rem', left: '3rem' },
+    { top: '3rem', right: '3rem' },
+    { bottom: '3rem', right: '3rem' },
+    { bottom: '3rem', left: '3rem' },
+  ];
+
   return (
     <>
       {/* Elegant gradient overlay */}
@@ -153,24 +217,15 @@ function SlateBackground({ theme }: { theme: any }) {
       />
 
       {/* Medium gray grid */}
-      <div
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage: `
-            linear-gradient(${theme.colors.primary}50 1px, transparent 1px),
-            linear-gradient(90deg, ${theme.colors.primary}50 1px, transparent 1px)
-          `,
-          backgroundSize: '60px 60px',
-        }}
+      <GridBackground
+        opacity="opacity-15"
+        color={`${theme.colors.primary}50`}
+        lineWidth="1px"
+        gridSize="60px 60px"
       />
 
       {/* Golden accent corners */}
-      {[
-        { top: '3rem', left: '3rem' },
-        { top: '3rem', right: '3rem' },
-        { bottom: '3rem', right: '3rem' },
-        { bottom: '3rem', left: '3rem' },
-      ].map((pos, i) => (
+      {cornerPositions.map((pos, i) => (
         <motion.div
           key={i}
           className="absolute w-3 h-3 rounded-full opacity-40"

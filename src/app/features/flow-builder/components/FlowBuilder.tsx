@@ -12,7 +12,6 @@ import {
   Play,
   Save,
   Download,
-  Upload,
   Trash2,
   Eye,
   FileCode,

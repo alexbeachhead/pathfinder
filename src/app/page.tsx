@@ -32,23 +32,25 @@ function LazyLoadFallback() {
   );
 }
 
+/**
+ * Get theme-specific mask overlay color
+ */
+const getMaskColor = (themeId: string): string => {
+  switch (themeId) {
+    case 'cyber':
+      return 'rgba(3, 7, 18, 0.92)'; // Very dark blue-black with cyan tint
+    case 'crimson':
+      return 'rgba(0, 0, 0, 0.94)'; // Almost pure black with slight red tint
+    case 'slate':
+      return 'rgba(0, 0, 0, 0.93)'; // Pure black with slate tint
+    default:
+      return 'rgba(3, 7, 18, 0.92)';
+  }
+};
+
 export default function Home() {
   const { currentPage, reportId } = useNavigation();
   const { currentTheme } = useTheme();
-
-  // Create theme-specific mask overlay colors
-  const getMaskColor = () => {
-    switch (currentTheme.id) {
-      case 'cyber':
-        return 'rgba(3, 7, 18, 0.92)'; // Very dark blue-black with cyan tint
-      case 'crimson':
-        return 'rgba(0, 0, 0, 0.94)'; // Almost pure black with slight red tint
-      case 'slate':
-        return 'rgba(0, 0, 0, 0.93)'; // Pure black with slate tint
-      default:
-        return 'rgba(3, 7, 18, 0.92)';
-    }
-  };
 
   // Conditional rendering based on current page
   let content;
@@ -104,7 +106,7 @@ export default function Home() {
         <div
           className="absolute inset-0 opacity-60"
           style={{
-            background: `linear-gradient(135deg, ${getMaskColor()} 0%, ${currentTheme.colors.background} 100%)`,
+            background: `linear-gradient(135deg, ${getMaskColor(currentTheme.id)} 0%, ${currentTheme.colors.background} 100%)`,
           }}
         />
       </div>

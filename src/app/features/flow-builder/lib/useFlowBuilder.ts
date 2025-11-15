@@ -34,10 +34,11 @@ export function useFlowBuilder(options: UseFlowBuilderOptions = {}) {
     (updater: TestFlow | ((prev: TestFlow) => TestFlow)) => {
       setFlow(prev => {
         const updated = typeof updater === 'function' ? updater(prev) : updater;
-        const withTimestamp = {
+        const withTimestamp: TestFlow = {
           ...updated,
           metadata: {
-            ...updated.metadata,
+            ...(updated.metadata || {}),
+            createdAt: updated.metadata?.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
         };

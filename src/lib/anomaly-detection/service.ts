@@ -1,23 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../supabase';
+import { generateCompletion, parseAIJsonResponse, getGeminiModel } from '../ai-client';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// Rate limiting
-const RATE_LIMIT_DELAY = 4000;
-let lastRequestTime = 0;
-
-async function waitForRateLimit(): Promise<void> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
-    const waitTime = RATE_LIMIT_DELAY - timeSinceLastRequest;
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-  }
-
-  lastRequestTime = Date.now();
-}
 
 export interface TestRunAnomaly {
   runId: string;
@@ -58,17 +43,16 @@ export function extractTestRunFeatures(logData: TestRunLogData): string {
 
 /**
  * Compute embedding for a test run using Gemini
+ * Note: This uses Gemini directly as it requires the embedding model
  */
 export async function computeTestRunEmbedding(features: string): Promise<number[]> {
   try {
-    await waitForRateLimit();
-
     const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
     const result = await model.embedContent(features);
 
     return result.embedding.values;
   } catch (error) {
-    console.error('Error computing embedding:', error);
+    console.error('[anomaly-detection] Error computing embedding:', error);
     // Return zero vector on error
     return new Array(768).fill(0);
   }
@@ -187,6 +171,7 @@ export async function detectAnomalies(
       runId: currentRun.runId,
       isAnomalous: true,
       confidence: 1 - avgSimilarity,
+      explanation: '',
       ...analysis,
     };
   } catch (error) {
@@ -202,13 +187,12 @@ export async function detectAnomalies(
 
 /**
  * Use LLM to analyze detected anomaly and provide insights
+ * Uses AI client with Gemini primary and Groq fallback
  */
 async function analyzeAnomalyWithLLM(
   currentRun: TestRunLogData,
   baselineRuns: TestRunLogData[]
 ): Promise<Partial<TestRunAnomaly>> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-
   const baselineStats = {
     avgPassRate: baselineRuns.reduce((sum, r) => sum + (r.passedTests / r.totalTests * 100), 0) / baselineRuns.length,
     avgDuration: baselineRuns.reduce((sum, r) => sum + (r.durationMs || 0), 0) / baselineRuns.length,
@@ -250,17 +234,12 @@ Return ONLY valid JSON with this structure:
 }`;
 
   try {
-    await waitForRateLimit();
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const { text, provider } = await generateCompletion(prompt);
+    console.log(`[anomaly-detection] Used AI provider: ${provider}`);
 
     // Parse JSON response
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*?\}/);
-    if (jsonMatch) {
-      const jsonText = jsonMatch[1] || jsonMatch[0];
-      const parsed = JSON.parse(jsonText);
+    try {
+      const parsed = parseAIJsonResponse<any>(text);
 
       return {
         anomalyType: parsed.anomalyType,
@@ -268,11 +247,11 @@ Return ONLY valid JSON with this structure:
         affectedTests: parsed.affectedTests || [],
         suggestedAction: parsed.suggestedAction,
       };
+    } catch (parseError) {
+      throw new Error('Failed to parse LLM response');
     }
-
-    throw new Error('Failed to parse LLM response');
   } catch (error) {
-    console.error('Error analyzing anomaly with LLM:', error);
+    console.error('[anomaly-detection] Error analyzing anomaly with LLM:', error);
     return {
       anomalyType: 'unusual_failure_pattern',
       explanation: 'Test run shows unusual patterns compared to baseline',

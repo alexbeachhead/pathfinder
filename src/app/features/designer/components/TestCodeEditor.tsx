@@ -5,7 +5,7 @@ import Editor from '@monaco-editor/react';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
-import { Copy, Download, Save, Edit3, Check } from 'lucide-react';
+import { Copy, Download, Edit3, Check } from 'lucide-react';
 
 interface TestCodeEditorProps {
   code: string;
@@ -36,7 +36,7 @@ export function TestCodeEditor({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy code:', error);
+      // Silently handle clipboard errors
     }
   };
 
@@ -100,16 +100,6 @@ export function TestCodeEditor({
             >
               Download
             </ThemedButton>
-            {!readOnly && isEditing && onSave && (
-              <ThemedButton
-                variant="primary"
-                size="sm"
-                onClick={handleSave}
-                leftIcon={<Save className="w-4 h-4" />}
-              >
-                Save
-              </ThemedButton>
-            )}
           </div>
         }
       />
@@ -137,20 +127,17 @@ export function TestCodeEditor({
               suggestOnTriggerCharacters: false,
               acceptSuggestionOnEnter: 'off',
               tabCompletion: 'off',
-              wordBasedSuggestions: false,
+              wordBasedSuggestions: 'off',
             }}
             beforeMount={(monaco) => {
-              // Disable TypeScript diagnostics
-              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+              // Disable TypeScript diagnostics for both TS and JS
+              const diagnosticsOptions = {
                 noSemanticValidation: true,
                 noSyntaxValidation: true,
                 noSuggestionDiagnostics: true,
-              });
-              monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-                noSemanticValidation: true,
-                noSyntaxValidation: true,
-                noSuggestionDiagnostics: true,
-              });
+              };
+              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+              monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
             }}
           />
         </div>

@@ -1,0 +1,264 @@
+/* ThemedSelect.module.css - SlimSelect Theme-Aware Styling */
+
+/* Base SlimSelect overrides */
+:global(.ss-main) {
+  width: 100%;
+  min-height: 42px;
+  transition: all 0.3s ease;
+}
+
+:global(.ss-main .ss-single-selected) {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+
+:global(.ss-main .ss-arrow) {
+  margin: 0 12px;
+}
+
+:global(.ss-main .ss-arrow path) {
+  transition: all 0.3s ease;
+}
+
+:global(.ss-content) {
+  border-radius: 8px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  margin-top: 4px;
+  overflow: hidden;
+  z-index: 9999;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:global(.ss-list) {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 4px 0;
+}
+
+:global(.ss-option) {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  position: relative;
+}
+
+:global(.ss-option:hover) {
+  cursor: pointer;
+}
+
+:global(.ss-disabled) {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+:global(.ss-search input) {
+  padding: 10px 16px;
+  border: none;
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+  font-size: 14px;
+}
+
+:global(.ss-search input:focus) {
+  outline: none;
+}
+
+/* Custom scrollbar for dropdown */
+:global(.ss-list::-webkit-scrollbar) {
+  width: 8px;
+}
+
+:global(.ss-list::-webkit-scrollbar-track) {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+
+:global(.ss-list::-webkit-scrollbar-thumb) {
+  background: color-mix(in srgb, var(--theme-primary, rgba(255, 255, 255, 0.3)) 60%, transparent);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+:global(.ss-list::-webkit-scrollbar-thumb:hover) {
+  background: color-mix(in srgb, var(--theme-primary, rgba(255, 255, 255, 0.5)) 80%, transparent);
+}
+
+/* ========================================
+   THEMED SELECT - Dynamic Theme Support
+   Uses CSS custom properties set by React
+   ======================================== */
+
+/* Main select button */
+:global(.themed-select-dynamic.ss-main) {
+  background: var(--select-bg, var(--theme-surface));
+  border: 2px solid var(--select-border, var(--theme-border));
+  border-radius: 8px;
+  color: var(--select-text, var(--theme-text-primary));
+  font-weight: 500;
+}
+
+/* Small size variant */
+:global(.themed-select-sm.ss-main .ss-single-selected) {
+  padding: 6px 12px;
+  min-height: 34px;
+  font-size: 0.875rem;
+}
+
+/* Large size variant */
+:global(.themed-select-lg.ss-main .ss-single-selected) {
+  padding: 12px 16px;
+  min-height: 50px;
+  font-size: 1rem;
+}
+
+/* Hover state */
+:global(.themed-select-dynamic.ss-main:hover:not(.ss-disabled)) {
+  border-color: var(--select-border-hover, var(--theme-primary));
+}
+
+/* Arrow/chevron */
+:global(.themed-select-dynamic.ss-main .ss-arrow path) {
+  stroke: var(--select-arrow, var(--theme-text-tertiary));
+}
+
+:global(.themed-select-dynamic.ss-main:hover:not(.ss-disabled) .ss-arrow path) {
+  stroke: var(--select-arrow-hover, var(--theme-primary));
+}
+
+/* Focus/Open state */
+:global(.themed-select-dynamic.ss-main.ss-open-above),
+:global(.themed-select-dynamic.ss-main.ss-open-below) {
+  border-color: var(--select-border-focus, var(--theme-accent));
+  box-shadow: 0 0 0 3px var(--select-focus-ring, rgba(var(--theme-accent-rgb), 0.2));
+}
+
+/* Error state */
+:global(.themed-select-error.ss-main) {
+  border-color: #ef4444 !important;
+}
+
+:global(.themed-select-error.ss-main:focus),
+:global(.themed-select-error.ss-main.ss-open-above),
+:global(.themed-select-error.ss-main.ss-open-below) {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Placeholder text */
+:global(.themed-select-dynamic .ss-single-selected.ss-disabled),
+:global(.themed-select-dynamic .ss-single-selected.placeholder) {
+  color: var(--select-placeholder, var(--theme-text-tertiary));
+}
+
+/* Dropdown content container */
+:global(.themed-select-dynamic .ss-content) {
+  background: color-mix(in srgb, var(--select-dropdown-bg, var(--theme-surface)) 95%, black) !important;
+  border: 2px solid var(--select-border, var(--theme-border)) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--select-border, var(--theme-border)) !important;
+}
+
+/* Options */
+:global(.themed-select-dynamic .ss-option) {
+  color: var(--select-option-text, var(--theme-text-primary)) !important;
+  background: color-mix(in srgb, var(--select-dropdown-bg, var(--theme-surface)) 95%, black) !important;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Option hover state */
+:global(.themed-select-dynamic .ss-option:hover),
+:global(.themed-select-dynamic .ss-option.ss-highlighted) {
+  background: var(--select-option-hover-bg, var(--theme-surface-hover)) !important;
+  color: var(--select-option-hover-text, var(--theme-text-primary)) !important;
+  font-weight: 600;
+  transform: translateX(2px);
+}
+
+/* Selected option */
+:global(.themed-select-dynamic .ss-option.ss-selected) {
+  background: var(--select-option-selected-bg, var(--theme-surface-hover)) !important;
+  color: var(--select-option-selected-text, var(--theme-text-primary)) !important;
+  font-weight: 600;
+  border-left: 3px solid var(--select-option-selected-border, var(--theme-accent)) !important;
+  padding-left: 13px;
+}
+
+/* Disabled option */
+:global(.themed-select-dynamic .ss-option.ss-disabled) {
+  color: var(--select-option-disabled, var(--theme-text-tertiary)) !important;
+  background: color-mix(in srgb, var(--select-dropdown-bg, var(--theme-surface)) 95%, black) !important;
+  opacity: 0.4;
+  font-weight: 400;
+}
+
+/* Search input */
+:global(.themed-select-dynamic .ss-search input) {
+  background: color-mix(in srgb, var(--select-search-bg, var(--theme-background)) 80%, black) !important;
+  color: var(--select-search-text, var(--theme-text-primary)) !important;
+  border-bottom-color: var(--select-border, var(--theme-border)) !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+:global(.themed-select-dynamic .ss-search input::placeholder) {
+  color: color-mix(in srgb, var(--select-placeholder, var(--theme-text-tertiary)) 70%, transparent) !important;
+  font-weight: 400;
+}
+
+:global(.themed-select-dynamic .ss-search input:focus) {
+  border-bottom-color: var(--select-border-focus, var(--theme-accent)) !important;
+  background: color-mix(in srgb, var(--select-search-bg, var(--theme-background)) 90%, black) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* "No results" message */
+:global(.themed-select-dynamic .ss-search .ss-addable) {
+  color: var(--select-placeholder, var(--theme-text-tertiary)) !important;
+  padding: 10px 16px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Multi-select values (if needed in the future) */
+:global(.themed-select-dynamic .ss-values .ss-value) {
+  background: var(--select-multi-value-bg, var(--theme-primary)) !important;
+  color: var(--select-multi-value-text, var(--theme-text-primary)) !important;
+  border: 1px solid var(--select-border, var(--theme-border)) !important;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 2px;
+}
+
+:global(.themed-select-dynamic .ss-values .ss-value .ss-value-delete) {
+  color: var(--select-multi-value-text, var(--theme-text-primary)) !important;
+  margin-left: 6px;
+}
+
+:global(.themed-select-dynamic .ss-values .ss-value .ss-value-delete:hover) {
+  color: #ef4444 !important;
+}
+
+/* Loading state placeholder */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}

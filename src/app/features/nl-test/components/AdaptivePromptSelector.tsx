@@ -157,7 +157,7 @@ export function AdaptivePromptSelector({ onSelectPrompt }: AdaptivePromptSelecto
 
                       {/* Meta Info */}
                       <div className="flex items-center gap-3 text-xs">
-                        <Badge variant="outline">{result.prompt.category}</Badge>
+                        <Badge variant="default">{result.prompt.category}</Badge>
 
                         <div className="flex items-center gap-1" style={{ color: currentTheme.colors.text.secondary }}>
                           <Clock className="w-3 h-3" />

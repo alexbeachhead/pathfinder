@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ similar_failures: similarFailures });
   } catch (error) {
-    console.error('Error finding similar failures:', error);
     return NextResponse.json(
       { error: 'Failed to find similar failures' },
       { status: 500 }

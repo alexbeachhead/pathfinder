@@ -41,7 +41,7 @@ interface UseLazyImageResult {
   /**
    * Ref to attach to the image container element
    */
-  ref: React.RefObject<HTMLDivElement>;
+  ref: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -85,6 +85,23 @@ export function useLazyImage({
     const element = ref.current;
     if (!element) return;
 
+    // Helper to unobserve element
+    const unobserveElement = () => {
+      if (observerRef.current && element) {
+        observerRef.current.unobserve(element);
+      }
+    };
+
+    // Helper to handle image load completion
+    const handleLoadComplete = (success: boolean) => {
+      setIsLoading(false);
+      if (success) {
+        setImageSrc(src);
+        setIsLoaded(true);
+        unobserveElement();
+      }
+    };
+
     // Create IntersectionObserver
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -96,21 +113,11 @@ export function useLazyImage({
             const img = new Image();
             img.src = src;
 
-            img.onload = () => {
-              setImageSrc(src);
-              setIsLoaded(true);
-              setIsLoading(false);
-
-              // Unobserve after loading
-              if (observerRef.current && element) {
-                observerRef.current.unobserve(element);
-              }
-            };
+            img.onload = () => handleLoadComplete(true);
 
             img.onerror = () => {
               // Keep placeholder on error
-              setIsLoading(false);
-              console.error(`Failed to load image: ${src}`);
+              handleLoadComplete(false);
             };
           }
         });
@@ -125,11 +132,7 @@ export function useLazyImage({
     observerRef.current.observe(element);
 
     // Cleanup
-    return () => {
-      if (observerRef.current && element) {
-        observerRef.current.unobserve(element);
-      }
-    };
+    return unobserveElement;
   }, [src, placeholder, rootMargin, threshold, isLoaded, isLoading]);
 
   return {

@@ -2,12 +2,12 @@ import { supabase } from '../supabase';
 import type { Project } from '@/lib/stores/appStore';
 
 /**
- * Get all projects
+ * Get all test projects
  */
 export async function getProjects(): Promise<Project[]> {
   try {
     const { data, error } = await supabase
-      .from('projects')
+      .from('test_projects')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -15,18 +15,18 @@ export async function getProjects(): Promise<Project[]> {
 
     return data || [];
   } catch (error) {
-    console.error('Error fetching projects:', error);
+    console.error('Error fetching test projects:', error);
     return [];
   }
 }
 
 /**
- * Get a single project by ID
+ * Get a single test project by ID
  */
 export async function getProjectById(id: string): Promise<Project | null> {
   try {
     const { data, error } = await supabase
-      .from('projects')
+      .from('test_projects')
       .select('*')
       .eq('id', id)
       .single();
@@ -35,13 +35,13 @@ export async function getProjectById(id: string): Promise<Project | null> {
 
     return data;
   } catch (error) {
-    console.error('Error fetching project:', error);
+    console.error('Error fetching test project:', error);
     return null;
   }
 }
 
 /**
- * Create a new project
+ * Create a new test project
  */
 export async function createProject(
   name: string,
@@ -50,7 +50,7 @@ export async function createProject(
 ): Promise<Project | null> {
   try {
     const { data, error } = await supabase
-      .from('projects')
+      .from('test_projects')
       .insert({ name, repo, description })
       .select()
       .single();
@@ -59,13 +59,13 @@ export async function createProject(
 
     return data;
   } catch (error) {
-    console.error('Error creating project:', error);
+    console.error('Error creating test project:', error);
     return null;
   }
 }
 
 /**
- * Update an existing project
+ * Update an existing test project
  */
 export async function updateProject(
   id: string,
@@ -73,7 +73,7 @@ export async function updateProject(
 ): Promise<Project | null> {
   try {
     const { data, error } = await supabase
-      .from('projects')
+      .from('test_projects')
       .update(updates)
       .eq('id', id)
       .select()
@@ -83,18 +83,18 @@ export async function updateProject(
 
     return data;
   } catch (error) {
-    console.error('Error updating project:', error);
+    console.error('Error updating test project:', error);
     return null;
   }
 }
 
 /**
- * Delete a project
+ * Delete a test project
  */
 export async function deleteProject(id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('projects')
+      .from('test_projects')
       .delete()
       .eq('id', id);
 
@@ -102,7 +102,7 @@ export async function deleteProject(id: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error('Error deleting project:', error);
+    console.error('Error deleting test project:', error);
     return false;
   }
 }

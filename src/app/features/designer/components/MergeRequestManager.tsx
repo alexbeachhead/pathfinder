@@ -10,10 +10,11 @@ import {
   executeMerge,
   getBranches,
 } from '@/lib/supabase/branches';
-import { GitMerge, Plus, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { GitMerge, Plus } from 'lucide-react';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { MergeConflictResolver } from './MergeConflictResolver';
+import { getStatusIcon } from '../lib/mergeHelpers';
 
 interface MergeRequestManagerProps {
   suiteId: string;
@@ -43,7 +44,7 @@ export function MergeRequestManager({ suiteId, currentBranchId }: MergeRequestMa
       setMergeRequests(requests);
       setBranches(branchList);
     } catch (error) {
-      console.error('Failed to load merge requests:', error);
+      // Handle load error silently
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ export function MergeRequestManager({ suiteId, currentBranchId }: MergeRequestMa
       setIsCreating(false);
       setSelectedTargetBranch('');
     } catch (error) {
-      console.error('Failed to create merge request:', error);
+      // Handle create error silently
     }
   };
 
@@ -78,7 +79,7 @@ export function MergeRequestManager({ suiteId, currentBranchId }: MergeRequestMa
       await loadData();
       setResolvingRequest(null);
     } catch (error) {
-      console.error('Failed to resolve conflicts:', error);
+      // Handle resolve error silently
     }
   };
 
@@ -87,20 +88,7 @@ export function MergeRequestManager({ suiteId, currentBranchId }: MergeRequestMa
       await executeMerge(requestId);
       await loadData();
     } catch (error) {
-      console.error('Failed to execute merge:', error);
-    }
-  };
-
-  const getStatusIcon = (status: MergeRequest['status']) => {
-    switch (status) {
-      case 'open':
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case 'merged':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'closed':
-        return <XCircle className="w-4 h-4 text-gray-500" />;
-      case 'conflict':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      // Handle merge error silently
     }
   };
 

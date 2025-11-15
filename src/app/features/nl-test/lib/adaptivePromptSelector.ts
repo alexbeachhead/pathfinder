@@ -225,6 +225,39 @@ function generateSelectionReason(
 }
 
 /**
+ * Helper to collect prompts for a specific difficulty target
+ */
+function collectPrompts(
+  availablePrompts: PromptDifficulty[],
+  userStats: UserPerformanceStats,
+  completedPromptIds: Set<string>,
+  options: PromptSelectionOptions,
+  count: number,
+  excludeFrom: SelectionResult[][] = []
+): SelectionResult[] {
+  const results: SelectionResult[] = [];
+  const excludedIds = new Set(
+    excludeFrom.flatMap(arr => arr.map(r => r.prompt.promptId))
+  );
+
+  for (let i = 0; i < count; i++) {
+    const result = selectNextPrompt(
+      availablePrompts,
+      userStats,
+      completedPromptIds,
+      options
+    );
+
+    if (result && !excludedIds.has(result.prompt.promptId)) {
+      results.push(result);
+      excludedIds.add(result.prompt.promptId);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Get recommended prompts for different learning paths
  */
 export function getRecommendedPrompts(
@@ -240,48 +273,33 @@ export function getRecommendedPrompts(
   const currentDiff = userStats.currentDifficulty;
 
   // Optimal: Match current difficulty
-  const optimal: SelectionResult[] = [];
-  for (let i = 0; i < count; i++) {
-    const result = selectNextPrompt(
-      availablePrompts,
-      userStats,
-      completedPromptIds,
-      { targetDifficulty: currentDiff, excludeCompleted: true }
-    );
-    if (result) optimal.push(result);
-  }
+  const optimal = collectPrompts(
+    availablePrompts,
+    userStats,
+    completedPromptIds,
+    { targetDifficulty: currentDiff, excludeCompleted: true },
+    count
+  );
 
   // Challenging: +1 to +2 difficulty
-  const challenging: SelectionResult[] = [];
-  const challengeDiff = Math.min(10, currentDiff + 1.5);
-  for (let i = 0; i < count; i++) {
-    const result = selectNextPrompt(
-      availablePrompts,
-      userStats,
-      completedPromptIds,
-      { targetDifficulty: challengeDiff, excludeCompleted: true }
-    );
-    if (result && !optimal.some(o => o.prompt.promptId === result.prompt.promptId)) {
-      challenging.push(result);
-    }
-  }
+  const challenging = collectPrompts(
+    availablePrompts,
+    userStats,
+    completedPromptIds,
+    { targetDifficulty: Math.min(10, currentDiff + 1.5), excludeCompleted: true },
+    count,
+    [optimal]
+  );
 
   // Review: -1 to -2 difficulty (from strengths)
-  const review: SelectionResult[] = [];
-  const reviewDiff = Math.max(1, currentDiff - 1.5);
-  for (let i = 0; i < count; i++) {
-    const result = selectNextPrompt(
-      availablePrompts,
-      userStats,
-      completedPromptIds,
-      { targetDifficulty: reviewDiff, excludeCompleted: false }
-    );
-    if (result &&
-        !optimal.some(o => o.prompt.promptId === result.prompt.promptId) &&
-        !challenging.some(c => c.prompt.promptId === result.prompt.promptId)) {
-      review.push(result);
-    }
-  }
+  const review = collectPrompts(
+    availablePrompts,
+    userStats,
+    completedPromptIds,
+    { targetDifficulty: Math.max(1, currentDiff - 1.5), excludeCompleted: false },
+    count,
+    [optimal, challenging]
+  );
 
   return { optimal, challenging, review };
 }

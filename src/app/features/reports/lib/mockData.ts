@@ -1,4 +1,4 @@
-import { TestRun, TestResult } from '@/lib/types';
+import { TestRun } from '@/lib/types';
 
 export interface ReportData {
   testRun: TestRun;

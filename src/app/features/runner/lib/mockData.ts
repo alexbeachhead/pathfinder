@@ -1,4 +1,4 @@
-import { TestSuite, TestRun } from '@/lib/types';
+import { TestSuite } from '@/lib/types';
 
 export interface TestSuiteWithCode extends TestSuite {
   testCount: number;

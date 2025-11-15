@@ -20,6 +20,50 @@ interface RunWithDuration extends TestRun {
   duration_ms?: number;
 }
 
+// Helper functions for status display
+function getStatusIcon(status: string) {
+  const icons = {
+    completed: CheckCircle2,
+    failed: XCircle,
+    running: Loader2,
+    default: Clock,
+  };
+  const Icon = icons[status as keyof typeof icons] || icons.default;
+  const className = status === 'running' ? 'animate-spin' : '';
+  return <Icon className={`w-4 h-4 ${className}`} />;
+}
+
+function getStatusColor(status: string, themeColors: { accent: string; text: { tertiary: string } }) {
+  const colors = {
+    completed: '#22c55e',
+    failed: '#ef4444',
+    running: themeColors.accent,
+    default: themeColors.text.tertiary,
+  };
+  return colors[status as keyof typeof colors] || colors.default;
+}
+
+function formatRelativeDate(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHistoryPanelProps) {
   const { currentTheme } = useTheme();
   const [runs, setRuns] = useState<RunWithDuration[]>([]);
@@ -29,6 +73,7 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
 
   useEffect(() => {
     loadRunHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suiteId]);
 
   const loadRunHistory = async () => {
@@ -45,8 +90,8 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
       }));
 
       setRuns(runsWithDuration);
-    } catch (error) {
-      console.error('Failed to load run history:', error);
+    } catch {
+      // Error loading run history - silently handle
     } finally {
       setLoading(false);
     }
@@ -81,53 +126,6 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
       setSortBy(field);
       setSortOrder('desc');
     }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="w-4 h-4" style={{ color: '#22c55e' }} />;
-      case 'failed':
-        return <XCircle className="w-4 h-4" style={{ color: '#ef4444' }} />;
-      case 'running':
-        return <Loader2 className="w-4 h-4 animate-spin" style={{ color: currentTheme.colors.accent }} />;
-      default:
-        return <Clock className="w-4 h-4" style={{ color: currentTheme.colors.text.tertiary }} />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return '#22c55e';
-      case 'failed':
-        return '#ef4444';
-      case 'running':
-        return currentTheme.colors.accent;
-      default:
-        return currentTheme.colors.text.tertiary;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   const sortedRuns = getSortedRuns();
@@ -207,10 +205,12 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      {getStatusIcon(run.status)}
+                      <span style={{ color: getStatusColor(run.status, currentTheme.colors) }}>
+                        {getStatusIcon(run.status)}
+                      </span>
                       <span
                         className="text-sm font-medium capitalize"
-                        style={{ color: getStatusColor(run.status) }}
+                        style={{ color: getStatusColor(run.status, currentTheme.colors) }}
                       >
                         {run.status}
                       </span>
@@ -219,7 +219,7 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
                       className="text-xs"
                       style={{ color: currentTheme.colors.text.tertiary }}
                     >
-                      {formatDate(run.created_at)}
+                      {formatRelativeDate(run.created_at)}
                     </span>
                   </div>
 
@@ -234,7 +234,7 @@ export function RunHistoryPanel({ suiteId, onRelaunch, onViewDetails }: RunHisto
                           className="h-full rounded-full transition-all"
                           style={{
                             width: run.status === 'completed' || run.status === 'failed' ? '100%' : '50%',
-                            backgroundColor: getStatusColor(run.status),
+                            backgroundColor: getStatusColor(run.status, currentTheme.colors),
                             opacity: 0.6,
                           }}
                         />

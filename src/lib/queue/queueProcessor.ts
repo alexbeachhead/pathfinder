@@ -42,7 +42,7 @@ export async function processQueue(options: QueueProcessorOptions = {}): Promise
     }
 
     // Start the job
-    await startQueueJob(job.id, job.suite_id, job.config, options);
+    await startQueueJob(job.id, job.suite_id, job.config as Record<string, unknown>, options);
   } catch (error) {
     console.error('Queue processor error:', error);
   }

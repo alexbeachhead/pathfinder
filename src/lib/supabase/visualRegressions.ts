@@ -1,6 +1,14 @@
 import { supabase } from '../supabase';
 import type { ComparisonResult, IgnoreRegion } from '../diff/screenshotComparator';
 
+export interface AIAnalysisData {
+  confidence?: number;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  suggestions?: string[];
+  findings?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface VisualRegression {
   id: string;
   test_run_id: string;
@@ -21,7 +29,7 @@ export interface VisualRegression {
   reviewed_by: string | null;
   reviewed_at: string | null;
   notes: string | null;
-  ai_analysis: any;
+  ai_analysis: AIAnalysisData | null;
   created_at: string;
   updated_at: string;
 }

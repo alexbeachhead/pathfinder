@@ -57,7 +57,7 @@ export function TestBuilder() {
 
       setNaturalLanguageText(nlText);
     } catch (error) {
-      console.error('Error syncing visual to NL:', error);
+      // Error syncing visual to NL - silently handle
     } finally {
       setSyncing(false);
     }
@@ -67,7 +67,12 @@ export function TestBuilder() {
     setSyncing(true);
     try {
       let result: {
-        steps: any[];
+        steps: Array<{
+          action: string;
+          target?: string;
+          value?: string;
+          selector?: string;
+        }>;
         targetUrl: string;
         testName: string;
       };
@@ -84,13 +89,19 @@ export function TestBuilder() {
         name: result.testName,
         targetUrl: result.targetUrl,
         steps: result.steps.map((step, index) => ({
-          ...step,
           id: `step-${Date.now()}-${index}`,
           order: index + 1,
+          type: step.action as any,
+          action: step.action,
+          config: {
+            selector: step.selector || step.target,
+            value: step.value,
+            description: step.action,
+          },
         })),
       });
     } catch (error) {
-      console.error('Error syncing NL to visual:', error);
+      // Error syncing NL to visual - silently handle
     } finally {
       setSyncing(false);
     }

@@ -29,7 +29,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
       const data = await getTestSuites();
       setSuites(data);
     } catch (error) {
-      console.error('Failed to load test suites:', error);
+      // Failed to load test suites - silently fail
     } finally {
       setLoading(false);
     }

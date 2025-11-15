@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
-import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Terminal, Network, AlertCircle, FileText, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import { ConsoleLog } from '@/lib/types';
 
@@ -11,6 +10,25 @@ interface LiveLogsPanelProps {
   logs: ConsoleLog[];
   networkLogs?: Array<{ url: string; method: string; status: number }>;
   errors?: Array<{ message: string; timestamp: string }>;
+}
+
+// Helper function for log type colors
+function getLogColor(type: string, accentColor: string, secondaryColor: string) {
+  const colors = {
+    error: '#ef4444',
+    warn: '#f97316',
+    warning: '#f97316',
+    info: accentColor,
+    default: secondaryColor,
+  };
+  return colors[type as keyof typeof colors] || colors.default;
+}
+
+// Helper function for network status colors
+function getNetworkStatusColor(status: number) {
+  if (status >= 200 && status < 300) return '#22c55e';
+  if (status >= 400) return '#ef4444';
+  return '#94a3b8'; // gray for other statuses
 }
 
 export function LiveLogsPanel({ logs, networkLogs = [], errors = [] }: LiveLogsPanelProps) {
@@ -25,20 +43,6 @@ export function LiveLogsPanel({ logs, networkLogs = [], errors = [] }: LiveLogsP
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, networkLogs, errors, autoScroll]);
-
-  const getLogColor = (type: string) => {
-    switch (type) {
-      case 'error':
-        return '#ef4444';
-      case 'warn':
-      case 'warning':
-        return '#f97316';
-      case 'info':
-        return currentTheme.colors.accent;
-      default:
-        return currentTheme.colors.text.secondary;
-    }
-  };
 
   const copyLogs = () => {
     let text = '';
@@ -137,7 +141,7 @@ export function LiveLogsPanel({ logs, networkLogs = [], errors = [] }: LiveLogsP
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'console' | 'network' | 'errors')}
                 className="flex items-center gap-2 px-4 py-2 transition-colors relative"
                 style={{
                   color: activeTab === tab.id ? currentTheme.colors.primary : currentTheme.colors.text.tertiary,
@@ -182,7 +186,7 @@ export function LiveLogsPanel({ logs, networkLogs = [], errors = [] }: LiveLogsP
                     <span style={{ color: currentTheme.colors.text.tertiary }}>
                       [{new Date(log.timestamp).toLocaleTimeString()}]
                     </span>
-                    <span style={{ color: getLogColor(log.type) }}>[{log.type.toUpperCase()}]</span>
+                    <span style={{ color: getLogColor(log.type, currentTheme.colors.accent, currentTheme.colors.text.secondary) }}>[{log.type.toUpperCase()}]</span>
                     <span style={{ color: currentTheme.colors.text.secondary }}>{log.message}</span>
                   </div>
                 ))
@@ -199,11 +203,7 @@ export function LiveLogsPanel({ logs, networkLogs = [], errors = [] }: LiveLogsP
                 networkLogs.map((log, index) => (
                   <div key={index} className="flex gap-2">
                     <span style={{ color: currentTheme.colors.accent }}>{log.method}</span>
-                    <span
-                      style={{
-                        color: log.status >= 200 && log.status < 300 ? '#22c55e' : log.status >= 400 ? '#ef4444' : currentTheme.colors.text.secondary,
-                      }}
-                    >
+                    <span style={{ color: getNetworkStatusColor(log.status) }}>
                       [{log.status}]
                     </span>
                     <span style={{ color: currentTheme.colors.text.secondary }} className="truncate">

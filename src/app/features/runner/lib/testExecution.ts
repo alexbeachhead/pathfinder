@@ -22,13 +22,14 @@ export async function simulateTestExecution(
   let currentStepIndex = 0;
   const updatedSteps = [...steps];
 
+  const countStepsByStatus = (status: TestExecutionStep['status']) =>
+    updatedSteps.filter(s => s.status === status).length;
+
   const updateProgress = (): ExecutionProgress => {
-    const completed = updatedSteps.filter(s =>
-      s.status === 'passed' || s.status === 'failed' || s.status === 'skipped'
-    ).length;
-    const passed = updatedSteps.filter(s => s.status === 'passed').length;
-    const failed = updatedSteps.filter(s => s.status === 'failed').length;
-    const skipped = updatedSteps.filter(s => s.status === 'skipped').length;
+    const passed = countStepsByStatus('passed');
+    const failed = countStepsByStatus('failed');
+    const skipped = countStepsByStatus('skipped');
+    const completed = passed + failed + skipped;
 
     return {
       current: completed,

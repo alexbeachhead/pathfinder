@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateCompletion, parseAIJsonResponse } from '../ai-client';
 
 export interface IntentAnalysis {
   isValid: boolean;
@@ -49,15 +49,12 @@ Return ONLY valid JSON, no markdown or explanation.`;
 
 /**
  * Analyze natural language intent to validate and parse test description
+ * Uses AI client with Gemini primary and Groq fallback
  */
 export async function analyzeIntent(
   description: string,
   targetUrl?: string
 ): Promise<IntentAnalysis> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured');
-  }
-
   // Quick validation
   if (!description || description.trim().length < 10) {
     return {
@@ -72,37 +69,29 @@ export async function analyzeIntent(
     };
   }
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-
   const prompt = INTENT_ANALYSIS_PROMPT
     .replace('{description}', description)
     .replace('{targetUrl}', targetUrl || 'Not provided');
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3, // Lower temperature for more consistent analysis
-        maxOutputTokens: 1024,
-      },
+    const { text: responseText, provider } = await generateCompletion(prompt, {
+      temperature: 0.3, // Lower temperature for more consistent analysis
+      maxTokens: 1024,
     });
 
-    const responseText = result.response.text();
+    console.log(`[intentAnalyzer] Used AI provider: ${provider}`);
 
     // Try to extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    try {
+      const analysis = parseAIJsonResponse<any>(responseText);
+      return normalizeAnalysis(analysis);
+    } catch (parseError) {
       // Fallback to basic analysis
+      console.warn('[intentAnalyzer] Failed to parse AI response, using basic analysis');
       return performBasicAnalysis(description, targetUrl);
     }
-
-    const analysis = JSON.parse(jsonMatch[0]);
-
-    // Validate and normalize the analysis
-    return normalizeAnalysis(analysis);
   } catch (error: any) {
-    console.error('Intent analysis error:', error);
+    console.error('[intentAnalyzer] Intent analysis error:', error);
     // Fallback to basic analysis
     return performBasicAnalysis(description, targetUrl);
   }
@@ -314,7 +303,7 @@ function calculateBasicConfidence(
 }
 
 /**
- * Normalize analysis from Gemini to ensure consistent structure
+ * Normalize analysis from AI to ensure consistent structure
  */
 function normalizeAnalysis(analysis: any): IntentAnalysis {
   return {

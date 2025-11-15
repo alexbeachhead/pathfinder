@@ -14,7 +14,7 @@ import {
 import { getDefaultPlugins } from '@/lib/plugins/defaultPlugins';
 import {
   Package,
-  Toggle,
+  Power,
   Trash2,
   Download,
   Star,
@@ -23,6 +23,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
+import { isPluginInstalled, filterPlugins } from '../lib/pluginHelpers';
 
 interface PluginManagerProps {
   onClose: () => void;
@@ -88,33 +89,8 @@ export function PluginManager({ onClose }: PluginManagerProps) {
     loadInstalledPlugins();
   };
 
-  const isPluginInstalled = (pluginId: string): boolean => {
-    return installedPlugins.some((p) => p.plugin_id === pluginId);
-  };
-
-  const filteredInstalledPlugins = installedPlugins.filter((plugin) => {
-    const matchesSearch =
-      !searchQuery ||
-      plugin.plugin_action.metadata.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plugin.plugin_action.metadata.displayName.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesCategory =
-      categoryFilter === 'all' || plugin.plugin_action.metadata.category === categoryFilter;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const filteredMarketplacePlugins = marketplacePlugins.filter((entry) => {
-    const matchesSearch =
-      !searchQuery ||
-      entry.pluginAction.metadata.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.pluginAction.metadata.displayName.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesCategory =
-      categoryFilter === 'all' || entry.pluginAction.metadata.category === categoryFilter;
-
-    return matchesSearch && matchesCategory;
-  });
+  const filteredInstalledPlugins = filterPlugins(installedPlugins, searchQuery, categoryFilter);
+  const filteredMarketplacePlugins = filterPlugins(marketplacePlugins, searchQuery, categoryFilter);
 
   const pluginCount = getPluginCount();
 
@@ -247,17 +223,17 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                               onClick={() => handleToggle(plugin.plugin_id, !plugin.enabled)}
                               className="p-2 rounded hover:bg-opacity-80 transition-colors"
                               style={{
-                                backgroundColor: plugin.enabled ? currentTheme.colors.success : currentTheme.colors.surface,
+                                backgroundColor: plugin.enabled ? '#00ff88' : currentTheme.colors.surface,
                               }}
                               title={plugin.enabled ? 'Disable' : 'Enable'}
                               data-testid={`plugin-toggle-${plugin.plugin_id}`}
                             >
-                              <Toggle className="w-4 h-4" />
+                              <Power className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleUninstall(plugin.plugin_id)}
                               className="p-2 rounded hover:bg-opacity-80 transition-colors"
-                              style={{ backgroundColor: currentTheme.colors.error }}
+                              style={{ backgroundColor: '#ff4444' }}
                               title="Uninstall"
                               data-testid={`plugin-uninstall-${plugin.plugin_id}`}
                             >
@@ -278,7 +254,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                     </div>
                   ) : (
                     filteredMarketplacePlugins.map((entry) => {
-                      const installed = isPluginInstalled(entry.pluginAction.metadata.id);
+                      const installed = isPluginInstalled(entry.pluginAction.metadata.id, installedPlugins);
                       return (
                         <div
                           key={entry.pluginAction.metadata.id}
@@ -296,7 +272,9 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                                   {entry.pluginAction.metadata.displayName}
                                 </h4>
                                 {entry.verified && (
-                                  <Shield className="w-4 h-4" style={{ color: currentTheme.colors.success }} title="Verified" />
+                                  <span title="Verified">
+                                    <Shield className="w-4 h-4" style={{ color: '#00ff88' }} />
+                                  </span>
                                 )}
                               </div>
                               <p className="text-sm mt-1" style={{ color: currentTheme.colors.text.tertiary }}>
@@ -304,7 +282,7 @@ export function PluginManager({ onClose }: PluginManagerProps) {
                               </p>
                               <div className="flex items-center gap-4 mt-2 text-xs" style={{ color: currentTheme.colors.text.tertiary }}>
                                 <span className="flex items-center gap-1">
-                                  <Star className="w-3 h-3 fill-current" style={{ color: currentTheme.colors.warning }} />
+                                  <Star className="w-3 h-3 fill-current" style={{ color: currentTheme.colors.accent }} />
                                   {entry.rating?.toFixed(1)} ({entry.reviews})
                                 </span>
                                 <span>{entry.downloads?.toLocaleString()} downloads</span>

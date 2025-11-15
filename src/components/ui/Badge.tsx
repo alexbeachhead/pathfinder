@@ -15,6 +15,8 @@ const variantStyles: Record<BadgeVariant, string> = {
   error: 'bg-error-100 text-error-800 border-error-200',
   info: 'bg-primary-100 text-primary-800 border-primary-200',
   default: 'bg-neutral-100 text-neutral-800 border-neutral-200',
+  secondary: 'bg-neutral-200 text-neutral-700 border-neutral-300',
+  outline: 'bg-transparent text-neutral-700 border-neutral-400',
 };
 
 export function Badge({ children, variant = 'default', className = '' }: BadgeProps) {

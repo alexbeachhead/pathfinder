@@ -79,7 +79,7 @@ export function AIRecommendations({ onClose }: AIRecommendationsProps) {
       const data = await response.json();
       setRecommendations(data.recommendations || []);
     } catch (err) {
-      console.error('Error loading recommendations:', err);
+      // Error loading recommendations - silently handle
       setError('Unable to load AI recommendations');
     } finally {
       setLoading(false);
@@ -134,77 +134,81 @@ export function AIRecommendations({ onClose }: AIRecommendationsProps) {
     }
   };
 
-  if (!currentProjectId || !currentProject) {
-    return (
-      <ThemedCard variant="bordered">
-        <ThemedCardContent>
-          <div className="p-4 text-center" style={{ color: currentTheme.colors.text.secondary }}>
-            <GitBranch className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Select a project to see AI test recommendations</p>
-          </div>
-        </ThemedCardContent>
-      </ThemedCard>
-    );
-  }
-
-  if (loading) {
-    return (
-      <ThemedCard variant="bordered">
-        <ThemedCardContent>
-          <div className="p-6 flex items-center justify-center gap-3" style={{ color: currentTheme.colors.text.secondary }}>
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: currentTheme.colors.primary }} />
-            <span>Analyzing {currentProject.name} repository...</span>
-          </div>
-        </ThemedCardContent>
-      </ThemedCard>
-    );
-  }
-
-  if (error) {
-    return (
-      <ThemedCard variant="bordered">
-        <ThemedCardContent>
-          <div className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5" style={{ color: '#ef4444' }} />
-              <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                {error}
-              </span>
+  const renderEmptyState = () => {
+    if (!currentProjectId || !currentProject) {
+      return (
+        <ThemedCard variant="bordered">
+          <ThemedCardContent>
+            <div className="p-4 text-center" style={{ color: currentTheme.colors.text.secondary }}>
+              <GitBranch className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Select a project to see AI test recommendations</p>
             </div>
-            <button onClick={onClose} className="p-1 hover:opacity-70">
-              <X className="w-4 h-4" style={{ color: currentTheme.colors.text.secondary }} />
-            </button>
-          </div>
-        </ThemedCardContent>
-      </ThemedCard>
-    );
-  }
+          </ThemedCardContent>
+        </ThemedCard>
+      );
+    }
+    return null;
+  };
 
-  if (recommendations.length === 0) {
-    return (
-      <ThemedCard variant="bordered">
-        <ThemedCardContent>
-          <div className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5" style={{ color: currentTheme.colors.accent }} />
-              <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                No recommendations available. Try adding a repository URL to your project.
-              </span>
-            </div>
-            <button onClick={onClose} className="p-1 hover:opacity-70">
-              <X className="w-4 h-4" style={{ color: currentTheme.colors.text.secondary }} />
-            </button>
+  const renderLoadingState = () => (
+    <ThemedCard variant="bordered">
+      <ThemedCardContent>
+        <div className="p-6 flex items-center justify-center gap-3" style={{ color: currentTheme.colors.text.secondary }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: currentTheme.colors.primary }} />
+          <span>Analyzing {currentProject?.name} repository...</span>
+        </div>
+      </ThemedCardContent>
+    </ThemedCard>
+  );
+
+  const renderErrorState = () => (
+    <ThemedCard variant="bordered">
+      <ThemedCardContent>
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5" style={{ color: '#ef4444' }} />
+            <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
+              {error}
+            </span>
           </div>
-        </ThemedCardContent>
-      </ThemedCard>
-    );
-  }
+          <button onClick={onClose} className="p-1 hover:opacity-70">
+            <X className="w-4 h-4" style={{ color: currentTheme.colors.text.secondary }} />
+          </button>
+        </div>
+      </ThemedCardContent>
+    </ThemedCard>
+  );
+
+  const renderNoRecommendationsState = () => (
+    <ThemedCard variant="bordered">
+      <ThemedCardContent>
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5" style={{ color: currentTheme.colors.accent }} />
+            <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
+              No recommendations available. Try adding a repository URL to your project.
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1 hover:opacity-70">
+            <X className="w-4 h-4" style={{ color: currentTheme.colors.text.secondary }} />
+          </button>
+        </div>
+      </ThemedCardContent>
+    </ThemedCard>
+  );
+
+  const emptyState = renderEmptyState();
+  if (emptyState) return emptyState;
+
+  if (loading) return renderLoadingState();
+  if (error) return renderErrorState();
+  if (recommendations.length === 0) return renderNoRecommendationsState();
 
   return (
     <ThemedCard variant="bordered">
       <ThemedCardHeader
         title="AI Test Recommendations"
-        subtitle={`${recommendations.length} suggestions for ${currentProject.name}`}
+        subtitle={`${recommendations.length} suggestions for ${currentProject?.name || 'project'}`}
         icon={<Sparkles className="w-5 h-5" />}
         action={
           <button
@@ -244,8 +248,8 @@ export function AIRecommendations({ onClose }: AIRecommendationsProps) {
                         <h4 className="text-sm font-medium" style={{ color: currentTheme.colors.text.primary }}>
                           {rec.testName}
                         </h4>
-                        <Badge
-                          variant="outline"
+                        <span
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
                           style={{
                             borderColor: getPriorityColor(rec.priority),
                             color: getPriorityColor(rec.priority),
@@ -253,7 +257,7 @@ export function AIRecommendations({ onClose }: AIRecommendationsProps) {
                         >
                           {getPriorityIcon(rec.priority)}
                           <span className="ml-1">{rec.priority}</span>
-                        </Badge>
+                        </span>
                         <Badge variant="secondary">{rec.category}</Badge>
                       </div>
                       <p className="text-xs" style={{ color: currentTheme.colors.text.tertiary }}>

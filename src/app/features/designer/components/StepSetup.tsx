@@ -3,9 +3,11 @@
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
+import { ThemedSwitch, SwitchOption } from '@/components/ui/ThemedSwitch';
 import { Wand2, Code, Zap, Camera } from 'lucide-react';
 import { MascotConfig, CodeLanguage, PreviewMode } from '@/lib/types';
-import { MascotCustomizer } from './MascotCustomizer';
+import { MascotCustomizer } from '../sub_Mascot/MascotCustomizer';
+import { getInputStyle, getLabelStyle, getErrorStyle } from '../lib/formHelpers';
 
 interface StepSetupProps {
   testSuiteName: string;
@@ -23,6 +25,36 @@ interface StepSetupProps {
   errors: Record<string, string>;
   onStartAnalysis: () => void;
 }
+
+// Code language options
+const codeLanguageOptions: SwitchOption<CodeLanguage>[] = [
+  {
+    value: 'typescript',
+    label: 'TypeScript',
+    description: 'Type-safe with IDE support',
+  },
+  {
+    value: 'javascript',
+    label: 'JavaScript',
+    description: 'Simple and widely compatible',
+  },
+];
+
+// Preview mode options
+const previewModeOptions: SwitchOption<PreviewMode>[] = [
+  {
+    value: 'lightweight',
+    label: 'Lightweight',
+    description: 'Fast loading, lower memory',
+    icon: <Zap className="w-4 h-4" />,
+  },
+  {
+    value: 'full',
+    label: 'Full Rendering',
+    description: 'Accurate visuals, high fidelity',
+    icon: <Camera className="w-4 h-4" />,
+  },
+];
 
 export function StepSetup({
   testSuiteName,
@@ -48,7 +80,7 @@ export function StepSetup({
       <ThemedCardContent>
         <div className="space-y-6 mt-4">
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.secondary }}>
+            <label className="block text-sm font-medium mb-2" style={getLabelStyle(currentTheme)}>
               Test Suite Name *
             </label>
             <input
@@ -57,19 +89,13 @@ export function StepSetup({
               onChange={(e) => setTestSuiteName(e.target.value)}
               placeholder="e.g., Homepage Tests"
               className="w-full px-4 py-3 rounded-lg transition-colors"
-              style={{
-                backgroundColor: currentTheme.colors.surface,
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: errors.testSuiteName ? '#ef4444' : currentTheme.colors.border,
-                color: currentTheme.colors.text.primary,
-              }}
+              style={getInputStyle(currentTheme, !!errors.testSuiteName)}
             />
-            {errors.testSuiteName && <p className="text-sm mt-1" style={{ color: '#ef4444' }}>{errors.testSuiteName}</p>}
+            {errors.testSuiteName && <p className="text-sm mt-1" style={getErrorStyle()}>{errors.testSuiteName}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.secondary }}>
+            <label className="block text-sm font-medium mb-2" style={getLabelStyle(currentTheme)}>
               Target URL *
             </label>
             <input
@@ -78,19 +104,13 @@ export function StepSetup({
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://example.com"
               className="w-full px-4 py-3 rounded-lg transition-colors"
-              style={{
-                backgroundColor: currentTheme.colors.surface,
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: errors.targetUrl ? '#ef4444' : currentTheme.colors.border,
-                color: currentTheme.colors.text.primary,
-              }}
+              style={getInputStyle(currentTheme, !!errors.targetUrl)}
             />
-            {errors.targetUrl && <p className="text-sm mt-1" style={{ color: '#ef4444' }}>{errors.targetUrl}</p>}
+            {errors.targetUrl && <p className="text-sm mt-1" style={getErrorStyle()}>{errors.targetUrl}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.secondary }}>
+            <label className="block text-sm font-medium mb-2" style={getLabelStyle(currentTheme)}>
               Description (Optional)
             </label>
             <textarea
@@ -98,120 +118,36 @@ export function StepSetup({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what this test suite covers..."
               rows={4}
-              className="w-full px-4 py-3 rounded-lg transition-colors resize-none"
-              style={{
-                backgroundColor: currentTheme.colors.surface,
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: currentTheme.colors.border,
-                color: currentTheme.colors.text.primary,
-              }}
+              className="w-full px-4 py-3 rounded-lg transition-colors resize-none active:outline-none focus:outline-none"
+              style={getInputStyle(currentTheme)}
               data-testid="description-input"
             />
           </div>
 
           {/* Code Language Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.secondary }}>
-              <Code className="w-4 h-4 inline-block mr-1.5" />
-              Generated Code Format
-            </label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setCodeLanguage('typescript')}
-                className="flex-1 px-4 py-3 rounded-lg transition-all font-medium text-sm"
-                style={{
-                  backgroundColor: codeLanguage === 'typescript' ? currentTheme.colors.accent : currentTheme.colors.surface,
-                  borderWidth: '2px',
-                  borderStyle: 'solid',
-                  borderColor: codeLanguage === 'typescript' ? currentTheme.colors.accent : currentTheme.colors.border,
-                  color: codeLanguage === 'typescript' ? '#ffffff' : currentTheme.colors.text.primary,
-                }}
-                data-testid="language-typescript-btn"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="font-bold">TypeScript</span>
-                  <span className="text-xs opacity-75">Type-safe with IDE support</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCodeLanguage('javascript')}
-                className="flex-1 px-4 py-3 rounded-lg transition-all font-medium text-sm"
-                style={{
-                  backgroundColor: codeLanguage === 'javascript' ? currentTheme.colors.accent : currentTheme.colors.surface,
-                  borderWidth: '2px',
-                  borderStyle: 'solid',
-                  borderColor: codeLanguage === 'javascript' ? currentTheme.colors.accent : currentTheme.colors.border,
-                  color: codeLanguage === 'javascript' ? '#ffffff' : currentTheme.colors.text.primary,
-                }}
-                data-testid="language-javascript-btn"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="font-bold">JavaScript</span>
-                  <span className="text-xs opacity-75">Simple and widely compatible</span>
-                </div>
-              </button>
-            </div>
-          </div>
+          <ThemedSwitch
+            options={codeLanguageOptions}
+            value={codeLanguage}
+            onChange={setCodeLanguage}
+            label="Generated Code Format"
+            icon={<Code className="w-4 h-4" />}
+            testIdPrefix="language"
+          />
 
           {/* Preview Mode Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.secondary }}>
-              <Camera className="w-4 h-4 inline-block mr-1.5" />
-              Preview Rendering Mode
-            </label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setPreviewMode('lightweight')}
-                className="flex-1 px-4 py-3 rounded-lg transition-all font-medium text-sm"
-                style={{
-                  backgroundColor: previewMode === 'lightweight' ? currentTheme.colors.accent : currentTheme.colors.surface,
-                  borderWidth: '2px',
-                  borderStyle: 'solid',
-                  borderColor: previewMode === 'lightweight' ? currentTheme.colors.accent : currentTheme.colors.border,
-                  color: previewMode === 'lightweight' ? '#ffffff' : currentTheme.colors.text.primary,
-                }}
-                data-testid="preview-mode-lightweight-btn"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="w-4 h-4" />
-                    <span className="font-bold">Lightweight</span>
-                  </div>
-                  <span className="text-xs opacity-75">Fast loading, lower memory</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewMode('full')}
-                className="flex-1 px-4 py-3 rounded-lg transition-all font-medium text-sm"
-                style={{
-                  backgroundColor: previewMode === 'full' ? currentTheme.colors.accent : currentTheme.colors.surface,
-                  borderWidth: '2px',
-                  borderStyle: 'solid',
-                  borderColor: previewMode === 'full' ? currentTheme.colors.accent : currentTheme.colors.border,
-                  color: previewMode === 'full' ? '#ffffff' : currentTheme.colors.text.primary,
-                }}
-                data-testid="preview-mode-full-btn"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <Camera className="w-4 h-4" />
-                    <span className="font-bold">Full Rendering</span>
-                  </div>
-                  <span className="text-xs opacity-75">Accurate visuals, high fidelity</span>
-                </div>
-              </button>
-            </div>
-            <p className="text-xs mt-2" style={{ color: currentTheme.colors.text.tertiary }}>
-              {previewMode === 'lightweight'
+          <ThemedSwitch
+            options={previewModeOptions}
+            value={previewMode}
+            onChange={setPreviewMode}
+            label="Preview Rendering Mode"
+            icon={<Camera className="w-4 h-4" />}
+            helpText={(mode) =>
+              mode === 'lightweight'
                 ? 'Lightweight mode uses DOM snapshots for quick previews with minimal resource usage.'
-                : 'Full rendering mode captures actual screenshots for precise visual feedback.'}
-            </p>
-          </div>
+                : 'Full rendering mode captures actual screenshots for precise visual feedback.'
+            }
+            testIdPrefix="preview-mode"
+          />
 
           {/* Mascot Customization */}
           <div

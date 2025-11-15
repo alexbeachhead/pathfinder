@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('OpenAI API error:', error);
       throw new Error('Failed to generate embedding');
     }
 
@@ -39,7 +38,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ embedding });
   } catch (error) {
-    console.error('Error generating embedding:', error);
     return NextResponse.json(
       { error: 'Failed to generate embedding' },
       { status: 500 }

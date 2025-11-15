@@ -241,7 +241,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('GitHub deployment error:', error);
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to deploy to GitHub' },
       { status: 500 }

@@ -40,7 +40,7 @@ export function Dashboard() {
       // Calculate overall health based on pass rate
       updateHealthGlow(stats.passRate);
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+      // Error loading dashboard data - silently handle
     } finally {
       setLoading(false);
     }

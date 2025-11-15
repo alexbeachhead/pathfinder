@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateCompletion, parseAIJsonResponse } from '../ai-client';
 import type {
   ExamplePrompt,
   ExampleCategory
@@ -519,10 +519,6 @@ export async function parseIntent(
   description: string,
   targetUrl?: string
 ): Promise<IntentAnalysis> {
-  if (!process.env.GEMINI_API_KEY && typeof window === 'undefined') {
-    throw new Error('GEMINI_API_KEY is not configured');
-  }
-
   // Quick validation
   if (!description || description.trim().length < 10) {
     return {
@@ -554,35 +550,29 @@ export async function parseIntent(
     return data.analysis;
   }
 
-  // Server-side analysis
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-
+  // Server-side analysis using AI client
   const prompt = INTENT_ANALYSIS_PROMPT
     .replace('{description}', description)
     .replace('{targetUrl}', targetUrl || 'Not provided');
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 1024,
-      },
+    const { text: responseText, provider } = await generateCompletion(prompt, {
+      temperature: 0.3,
+      maxTokens: 1024,
     });
 
-    const responseText = result.response.text();
+    console.log(`[testEngine parseIntent] Used AI provider: ${provider}`);
 
     // Try to extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    try {
+      const analysis = parseAIJsonResponse<any>(responseText);
+      return normalizeAnalysis(analysis);
+    } catch (parseError) {
+      console.warn('[testEngine] Failed to parse AI response, using basic analysis');
       return performBasicAnalysis(description, targetUrl);
     }
-
-    const analysis = JSON.parse(jsonMatch[0]);
-    return normalizeAnalysis(analysis);
   } catch (error: any) {
-    console.error('Intent analysis error:', error);
+    console.error('[testEngine] Intent analysis error:', error);
     return performBasicAnalysis(description, targetUrl);
   }
 }

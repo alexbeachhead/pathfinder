@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
@@ -10,16 +9,65 @@ import {
   TrendingDown,
   Target,
   Award,
-  AlertCircle,
   Activity,
 } from 'lucide-react';
 import { UserPerformanceStats, getPerformanceTrend } from '../lib/performanceTracking';
-import { scoreToLevel, getDifficultyColor } from '../lib/difficultyScoring';
+import { scoreToLevel } from '../lib/difficultyScoring';
 import { DifficultyBadge } from './DifficultyBadge';
 
 interface PerformanceStatsProps {
   stats: UserPerformanceStats;
   compact?: boolean;
+}
+
+// Helper component for performance trend display
+function PerformanceTrendIndicator({ trend, currentTheme }: { trend: string; currentTheme: { colors: { surface: string; border: string; text: { secondary: string } } } }) {
+  const trendConfig = {
+    improving: {
+      icon: TrendingUp,
+      color: '#10b981',
+      title: 'Improving',
+      message: 'Great progress! Keep it up',
+    },
+    declining: {
+      icon: TrendingDown,
+      color: '#ef4444',
+      title: 'Needs Focus',
+      message: 'Consider reviewing fundamentals',
+    },
+    stable: {
+      icon: Activity,
+      color: '#3b82f6',
+      title: 'Stable',
+      message: 'Consistent performance',
+    },
+  };
+
+  const config = trendConfig[trend as keyof typeof trendConfig] || trendConfig.stable;
+  const Icon = config.icon;
+
+  return (
+    <div
+      className="p-3 rounded flex items-center gap-3"
+      style={{
+        backgroundColor: currentTheme.colors.surface,
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: currentTheme.colors.border,
+      }}
+      data-testid="performance-trend"
+    >
+      <Icon className="w-5 h-5" style={{ color: config.color }} />
+      <div>
+        <p className="text-sm font-medium" style={{ color: config.color }}>
+          {config.title}
+        </p>
+        <p className="text-xs" style={{ color: currentTheme.colors.text.secondary }}>
+          {config.message}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function PerformanceStats({ stats, compact = false }: PerformanceStatsProps) {
@@ -76,6 +124,7 @@ export function PerformanceStats({ stats, compact = false }: PerformanceStatsPro
               value={`${(stats.averageAccuracy * 100).toFixed(0)}%`}
               color={stats.averageAccuracy >= 0.7 ? '#10b981' : '#f59e0b'}
               testId="accuracy-stat"
+              currentTheme={currentTheme}
             />
 
             <StatCard
@@ -84,60 +133,12 @@ export function PerformanceStats({ stats, compact = false }: PerformanceStatsPro
               value={stats.completedAttempts.toString()}
               color={currentTheme.colors.primary}
               testId="completed-stat"
+              currentTheme={currentTheme}
             />
           </div>
 
           {/* Performance Trend */}
-          <div
-            className="p-3 rounded flex items-center gap-3"
-            style={{
-              backgroundColor: currentTheme.colors.surface,
-              borderWidth: '1px',
-              borderStyle: 'solid',
-              borderColor: currentTheme.colors.border,
-            }}
-            data-testid="performance-trend"
-          >
-            {trend === 'improving' && (
-              <>
-                <TrendingUp className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium" style={{ color: '#10b981' }}>
-                    Improving
-                  </p>
-                  <p className="text-xs" style={{ color: currentTheme.colors.text.secondary }}>
-                    Great progress! Keep it up
-                  </p>
-                </div>
-              </>
-            )}
-            {trend === 'declining' && (
-              <>
-                <TrendingDown className="w-5 h-5 text-red-500" />
-                <div>
-                  <p className="text-sm font-medium" style={{ color: '#ef4444' }}>
-                    Needs Focus
-                  </p>
-                  <p className="text-xs" style={{ color: currentTheme.colors.text.secondary }}>
-                    Consider reviewing fundamentals
-                  </p>
-                </div>
-              </>
-            )}
-            {trend === 'stable' && (
-              <>
-                <Activity className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm font-medium" style={{ color: '#3b82f6' }}>
-                    Stable
-                  </p>
-                  <p className="text-xs" style={{ color: currentTheme.colors.text.secondary }}>
-                    Consistent performance
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
+          <PerformanceTrendIndicator trend={trend} currentTheme={currentTheme} />
 
           {/* Strengths & Weaknesses */}
           {(stats.strengths.length > 0 || stats.weaknesses.length > 0) && (
@@ -205,21 +206,22 @@ export function PerformanceStats({ stats, compact = false }: PerformanceStatsPro
   );
 }
 
+// Moved StatCard inside the file to avoid re-rendering issues
 function StatCard({
   icon,
   label,
   value,
   color,
   testId,
+  currentTheme,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   color: string;
   testId: string;
+  currentTheme: { colors: { surface: string; border: string; text: { secondary: string; primary: string } } };
 }) {
-  const { currentTheme } = useTheme();
-
   return (
     <div
       className="p-3 rounded"

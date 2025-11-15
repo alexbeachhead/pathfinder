@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
       resolution_id: resolutionId,
     });
   } catch (error) {
-    console.error('Error saving resolution:', error);
     return NextResponse.json(
       { error: 'Failed to save resolution' },
       { status: 500 }

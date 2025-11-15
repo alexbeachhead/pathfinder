@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
-import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
+import { ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Monitor, Tablet, Smartphone, CheckSquare, Square } from 'lucide-react';
 
 interface ViewportConfig {

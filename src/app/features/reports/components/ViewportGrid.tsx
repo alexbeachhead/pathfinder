@@ -6,12 +6,16 @@ import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui
 import { Monitor, Smartphone, Tablet, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useLazyImage } from '../lib/useLazyImage';
 
+interface TestError {
+  message?: string;
+}
+
 interface ViewportResult {
   viewport: string;
   viewport_size: string;
   status: 'pass' | 'fail' | 'skip' | 'skipped';
   duration_ms?: number;
-  errors?: any[];
+  errors?: TestError[];
   screenshot_url?: string;
 }
 
@@ -19,6 +23,39 @@ interface ViewportGridProps {
   results: ViewportResult[];
   testName: string;
 }
+
+// Helper functions extracted for reusability
+const getViewportIcon = (viewport: string) => {
+  const lowerViewport = viewport.toLowerCase();
+  if (lowerViewport.includes('mobile')) {
+    return <Smartphone className="w-5 h-5" />;
+  } else if (lowerViewport.includes('tablet')) {
+    return <Tablet className="w-5 h-5" />;
+  }
+  return <Monitor className="w-5 h-5" />;
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'pass':
+      return <CheckCircle className="w-5 h-5" />;
+    case 'fail':
+      return <XCircle className="w-5 h-5" />;
+    default:
+      return <AlertCircle className="w-5 h-5" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pass':
+      return '#22c55e';
+    case 'fail':
+      return '#ef4444';
+    default:
+      return '#eab308';
+  }
+};
 
 function ViewportCard({
   viewport,
@@ -30,39 +67,6 @@ function ViewportCard({
   index: number;
 }) {
   const { currentTheme } = useTheme();
-
-  const getViewportIcon = (viewport: string) => {
-    const lowerViewport = viewport.toLowerCase();
-    if (lowerViewport.includes('mobile')) {
-      return <Smartphone className="w-5 h-5" />;
-    } else if (lowerViewport.includes('tablet')) {
-      return <Tablet className="w-5 h-5" />;
-    }
-    return <Monitor className="w-5 h-5" />;
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pass':
-        return <CheckCircle className="w-5 h-5" />;
-      case 'fail':
-        return <XCircle className="w-5 h-5" />;
-      default:
-        return <AlertCircle className="w-5 h-5" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pass':
-        return '#22c55e';
-      case 'fail':
-        return '#ef4444';
-      default:
-        return '#eab308';
-    }
-  };
-
   const statusColor = getStatusColor(result.status);
 
   // Lazy-load screenshot

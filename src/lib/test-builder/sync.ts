@@ -238,8 +238,8 @@ export async function naturalLanguageToStepsAI(text: string): Promise<{
 
     const data = await response.json();
     return data;
-  } catch (error) {
-    console.error('Error in AI conversion:', error);
+  } catch {
+    // Error in AI conversion, using fallback
     // Fallback to simple conversion
     return naturalLanguageToStepsSimple(text);
   }
@@ -262,8 +262,8 @@ export async function stepsToNaturalLanguageAI(flow: TestFlow): Promise<string> 
 
     const data = await response.json();
     return data.naturalLanguage;
-  } catch (error) {
-    console.error('Error in AI conversion:', error);
+  } catch {
+    // Error in AI conversion, using fallback
     // Fallback to simple conversion
     return stepsToNaturalLanguageSimple(flow);
   }

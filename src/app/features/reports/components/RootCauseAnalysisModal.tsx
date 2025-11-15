@@ -25,6 +25,7 @@ import {
   saveFailureResolution,
 } from '@/lib/ai/rootCauseAnalysis';
 import { TestResult } from '@/lib/types';
+import { getPriorityColor, getCategoryColor } from '../lib/reportHelpers';
 
 interface RootCauseAnalysisModalProps {
   isOpen: boolean;
@@ -100,36 +101,6 @@ export function RootCauseAnalysisModal({
         return <Clock className="w-4 h-4" />;
       default:
         return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
-
-  const getCategoryColor = (category: ProbableCause['category']) => {
-    switch (category) {
-      case 'code':
-        return '#ef4444';
-      case 'environment':
-        return '#f59e0b';
-      case 'data':
-        return '#8b5cf6';
-      case 'infrastructure':
-        return '#06b6d4';
-      case 'timeout':
-        return '#f97316';
-      case 'dependency':
-        return '#ec4899';
-      default:
-        return currentTheme.colors.text.tertiary;
-    }
-  };
-
-  const getPriorityColor = (priority: RemediationSuggestion['priority']) => {
-    switch (priority) {
-      case 'high':
-        return '#ef4444';
-      case 'medium':
-        return '#f59e0b';
-      case 'low':
-        return '#22c55e';
     }
   };
 

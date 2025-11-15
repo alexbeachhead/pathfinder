@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
-import { ThemedButton } from '@/components/ui/ThemedButton';
 import { compareTestRuns, getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';
 import { GitCompare, TrendingUp, TrendingDown, ArrowRight, Loader2 } from 'lucide-react';
+import { MetricCard } from './MetricCard';
+import { ComparisonMetricRow } from './ComparisonMetricRow';
 
 interface HistoricalComparisonProps {
   currentRunId: string;
@@ -51,7 +52,7 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
         setSelectedPreviousRunId(otherRuns[0].id);
       }
     } catch (error) {
-      console.error('Failed to load test runs:', error);
+      // Failed to load test runs - silently fail
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
       const data = await compareTestRuns(currentRunId, selectedPreviousRunId);
       setComparison(data);
     } catch (error) {
-      console.error('Failed to load comparison:', error);
+      // Failed to load comparison - silently fail
     } finally {
       setLoading(false);
     }
@@ -167,112 +168,58 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Improvements */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-lg"
-                style={{
-                  backgroundColor: `${comparison.improvements > 0 ? '#22c55e' : currentTheme.colors.surface}20`,
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: comparison.improvements > 0 ? '#22c55e50' : currentTheme.colors.border,
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4" style={{ color: '#22c55e' }} />
-                  <span className="text-xs font-medium" style={{ color: currentTheme.colors.text.tertiary }}>
-                    Improvements
-                  </span>
-                </div>
-                <div className="text-2xl font-bold" style={{ color: '#22c55e' }}>
-                  +{comparison.improvements}
-                </div>
-                <div className="text-xs mt-1" style={{ color: currentTheme.colors.text.tertiary }}>
-                  Tests fixed
-                </div>
-              </motion.div>
-
-              {/* Regressions */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="p-4 rounded-lg"
-                style={{
-                  backgroundColor: `${comparison.regressions > 0 ? '#ef4444' : currentTheme.colors.surface}20`,
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: comparison.regressions > 0 ? '#ef444450' : currentTheme.colors.border,
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingDown className="w-4 h-4" style={{ color: '#ef4444' }} />
-                  <span className="text-xs font-medium" style={{ color: currentTheme.colors.text.tertiary }}>
-                    Regressions
-                  </span>
-                </div>
-                <div className="text-2xl font-bold" style={{ color: '#ef4444' }}>
-                  {comparison.regressions > 0 ? '-' : ''}{comparison.regressions}
-                </div>
-                <div className="text-xs mt-1" style={{ color: currentTheme.colors.text.tertiary }}>
-                  Tests broken
-                </div>
-              </motion.div>
-
-              {/* Resolved Issues */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="p-4 rounded-lg"
-                style={{
-                  backgroundColor: `${comparison.resolvedIssues > 0 ? '#22c55e' : currentTheme.colors.surface}20`,
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: comparison.resolvedIssues > 0 ? '#22c55e50' : currentTheme.colors.border,
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4" style={{ color: '#22c55e' }} />
-                  <span className="text-xs font-medium" style={{ color: currentTheme.colors.text.tertiary }}>
-                    Resolved Issues
-                  </span>
-                </div>
-                <div className="text-2xl font-bold" style={{ color: '#22c55e' }}>
-                  {comparison.resolvedIssues}
-                </div>
-                <div className="text-xs mt-1" style={{ color: currentTheme.colors.text.tertiary }}>
-                  Issues fixed
-                </div>
-              </motion.div>
-
-              {/* New Issues */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="p-4 rounded-lg"
-                style={{
-                  backgroundColor: `${comparison.newIssues > 0 ? '#f97316' : currentTheme.colors.surface}20`,
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: comparison.newIssues > 0 ? '#f9731650' : currentTheme.colors.border,
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingDown className="w-4 h-4" style={{ color: '#f97316' }} />
-                  <span className="text-xs font-medium" style={{ color: currentTheme.colors.text.tertiary }}>
-                    New Issues
-                  </span>
-                </div>
-                <div className="text-2xl font-bold" style={{ color: '#f97316' }}>
-                  {comparison.newIssues}
-                </div>
-                <div className="text-xs mt-1" style={{ color: currentTheme.colors.text.tertiary }}>
-                  New problems
-                </div>
-              </motion.div>
+              <MetricCard
+                icon={TrendingUp}
+                iconColor="#22c55e"
+                label="Improvements"
+                value={comparison.improvements}
+                suffix="Tests fixed"
+                backgroundColor={`${comparison.improvements > 0 ? '#22c55e' : currentTheme.colors.surface}20`}
+                borderColor={comparison.improvements > 0 ? '#22c55e50' : currentTheme.colors.border}
+                delay={0}
+                textColor="#22c55e"
+                tertiaryColor={currentTheme.colors.text.tertiary}
+                testId="improvements-metric"
+              />
+              <MetricCard
+                icon={TrendingDown}
+                iconColor="#ef4444"
+                label="Regressions"
+                value={comparison.regressions}
+                suffix="Tests broken"
+                backgroundColor={`${comparison.regressions > 0 ? '#ef4444' : currentTheme.colors.surface}20`}
+                borderColor={comparison.regressions > 0 ? '#ef444450' : currentTheme.colors.border}
+                delay={0.05}
+                textColor="#ef4444"
+                tertiaryColor={currentTheme.colors.text.tertiary}
+                testId="regressions-metric"
+              />
+              <MetricCard
+                icon={TrendingUp}
+                iconColor="#22c55e"
+                label="Resolved Issues"
+                value={comparison.resolvedIssues}
+                suffix="Issues fixed"
+                backgroundColor={`${comparison.resolvedIssues > 0 ? '#22c55e' : currentTheme.colors.surface}20`}
+                borderColor={comparison.resolvedIssues > 0 ? '#22c55e50' : currentTheme.colors.border}
+                delay={0.1}
+                textColor="#22c55e"
+                tertiaryColor={currentTheme.colors.text.tertiary}
+                testId="resolved-issues-metric"
+              />
+              <MetricCard
+                icon={TrendingDown}
+                iconColor="#f97316"
+                label="New Issues"
+                value={comparison.newIssues}
+                suffix="New problems"
+                backgroundColor={`${comparison.newIssues > 0 ? '#f97316' : currentTheme.colors.surface}20`}
+                borderColor={comparison.newIssues > 0 ? '#f9731650' : currentTheme.colors.border}
+                delay={0.15}
+                textColor="#f97316"
+                tertiaryColor={currentTheme.colors.text.tertiary}
+                testId="new-issues-metric"
+              />
             </div>
 
             {/* Side-by-Side Comparison */}
@@ -288,39 +235,35 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
                 }}
               >
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Total Tests
-                    </span>
-                    <span className="font-semibold" style={{ color: currentTheme.colors.text.primary }}>
-                      {comparison.previous.total_tests}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Passed
-                    </span>
-                    <span className="font-semibold" style={{ color: '#22c55e' }}>
-                      {comparison.previous.passed_tests}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Failed
-                    </span>
-                    <span className="font-semibold" style={{ color: '#ef4444' }}>
-                      {comparison.previous.failed_tests}
-                    </span>
-                  </div>
+                  <ComparisonMetricRow
+                    label="Total Tests"
+                    value={comparison.previous.total_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor={currentTheme.colors.text.primary}
+                    isBold={true}
+                  />
+                  <ComparisonMetricRow
+                    label="Passed"
+                    value={comparison.previous.passed_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor="#22c55e"
+                    isBold={true}
+                  />
+                  <ComparisonMetricRow
+                    label="Failed"
+                    value={comparison.previous.failed_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor="#ef4444"
+                    isBold={true}
+                  />
                   {comparison.previous.quality_score !== undefined && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                        Quality Score
-                      </span>
-                      <span className="font-semibold" style={{ color: currentTheme.colors.accent }}>
-                        {comparison.previous.quality_score}
-                      </span>
-                    </div>
+                    <ComparisonMetricRow
+                      label="Quality Score"
+                      value={comparison.previous.quality_score}
+                      labelColor={currentTheme.colors.text.secondary}
+                      valueColor={currentTheme.colors.accent}
+                      isBold={true}
+                    />
                   )}
                 </div>
               </div>
@@ -336,30 +279,27 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
                 }}
               >
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Total Tests
-                    </span>
-                    <span className="font-semibold" style={{ color: currentTheme.colors.text.primary }}>
-                      {comparison.current.total_tests}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Passed
-                    </span>
-                    <span className="font-semibold" style={{ color: '#22c55e' }}>
-                      {comparison.current.passed_tests}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                      Failed
-                    </span>
-                    <span className="font-semibold" style={{ color: '#ef4444' }}>
-                      {comparison.current.failed_tests}
-                    </span>
-                  </div>
+                  <ComparisonMetricRow
+                    label="Total Tests"
+                    value={comparison.current.total_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor={currentTheme.colors.text.primary}
+                    isBold={true}
+                  />
+                  <ComparisonMetricRow
+                    label="Passed"
+                    value={comparison.current.passed_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor="#22c55e"
+                    isBold={true}
+                  />
+                  <ComparisonMetricRow
+                    label="Failed"
+                    value={comparison.current.failed_tests}
+                    labelColor={currentTheme.colors.text.secondary}
+                    valueColor="#ef4444"
+                    isBold={true}
+                  />
                   {comparison.current.quality_score !== undefined && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
