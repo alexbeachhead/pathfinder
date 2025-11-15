@@ -2,12 +2,12 @@
 
 import { Home, Wand2, Play, FileText, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigation, PageView } from '@/contexts/NavigationContext';
+import { useNavigation, PageView } from '@/lib/stores/appStore';
 
 const navigationItems = [
   { name: 'Dashboard', page: 'dashboard' as PageView, icon: Home },
-  { name: 'Test Designer', page: 'designer' as PageView, icon: Wand2 },
-  { name: 'Test Runner', page: 'runner' as PageView, icon: Play },
+  { name: 'Designer', page: 'designer' as PageView, icon: Wand2 },
+  { name: 'Runner', page: 'runner' as PageView, icon: Play },
   { name: 'Reports', page: 'reports' as PageView, icon: FileText },
 ];
 

@@ -1,17 +1,64 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
+import { ThemedButton } from '@/components/ui/ThemedButton';
 import { TestResultWithDetails } from '../lib/mockData';
-import { CheckCircle2, XCircle, Minus, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { CheckCircle2, XCircle, Minus, Monitor, Tablet, Smartphone, AlertCircle, ExternalLink, Brain } from 'lucide-react';
+import { CreateTicketModal } from './CreateTicketModal';
+import { RootCauseAnalysisModal } from './RootCauseAnalysisModal';
+import { IssueTrackerType } from '@/lib/issueTrackers/types';
 
 interface TestResultsTableProps {
   results: TestResultWithDetails[];
+  testSuiteName?: string;
+  targetUrl?: string;
 }
 
-export function TestResultsTable({ results }: TestResultsTableProps) {
+interface TicketLink {
+  resultId: string;
+  ticketUrl: string;
+  ticketKey: string;
+  trackerType: IssueTrackerType;
+}
+
+export function TestResultsTable({ results, testSuiteName = 'Test Suite', targetUrl = 'https://example.com' }: TestResultsTableProps) {
   const { currentTheme } = useTheme();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<TestResultWithDetails | null>(null);
+  const [ticketLinks, setTicketLinks] = useState<TicketLink[]>([]);
+  const [isRootCauseModalOpen, setIsRootCauseModalOpen] = useState(false);
+  const [selectedFailureResult, setSelectedFailureResult] = useState<TestResultWithDetails | null>(null);
+
+  const handleCreateTicket = (result: TestResultWithDetails) => {
+    setSelectedResult(result);
+    setIsModalOpen(true);
+  };
+
+  const handleAnalyzeRootCause = (result: TestResultWithDetails) => {
+    setSelectedFailureResult(result);
+    setIsRootCauseModalOpen(true);
+  };
+
+  const handleTicketCreated = (ticketUrl: string, ticketKey: string, trackerType: IssueTrackerType) => {
+    if (selectedResult) {
+      setTicketLinks([
+        ...ticketLinks,
+        {
+          resultId: selectedResult.id,
+          ticketUrl,
+          ticketKey,
+          trackerType,
+        },
+      ]);
+    }
+  };
+
+  const getTicketForResult = (resultId: string): TicketLink | undefined => {
+    return ticketLinks.find((link) => link.resultId === resultId);
+  };
 
   const getStatusIcon = (status: 'pass' | 'fail' | 'skipped') => {
     switch (status) {
@@ -100,6 +147,11 @@ export function TestResultsTable({ results }: TestResultsTableProps) {
                 >
                   Duration
                 </th>
+                <th className="text-center p-3 text-xs font-semibold"
+                  style={{ color: currentTheme.colors.text.tertiary }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -111,7 +163,7 @@ export function TestResultsTable({ results }: TestResultsTableProps) {
                   transition={{ duration: 0.3, delay: groupIndex * 0.05 }}
                 >
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="p-0"
                     style={{
                       borderTopWidth: groupIndex > 0 ? '1px' : '0',
@@ -131,40 +183,88 @@ export function TestResultsTable({ results }: TestResultsTableProps) {
                     </div>
 
                     {/* Viewport Results */}
-                    {testResults.map((result, resultIndex) => (
-                      <div
-                        key={result.id}
-                        className="grid grid-cols-4 p-3 transition-colors hover:bg-opacity-50"
-                        style={{
-                          backgroundColor: resultIndex % 2 === 0 ? 'transparent' : `${currentTheme.colors.surface}20`,
-                          borderTopWidth: '1px',
-                          borderTopStyle: 'solid',
-                          borderTopColor: currentTheme.colors.border,
-                        }}
-                      >
-                        <div></div>
-                        <div className="flex items-center justify-center gap-2">
-                          {getViewportIcon(result.viewport)}
-                          <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
-                            {result.viewport_size}
-                          </span>
+                    {testResults.map((result, resultIndex) => {
+                      const ticketLink = getTicketForResult(result.id);
+                      return (
+                        <div
+                          key={result.id}
+                          className="grid grid-cols-5 p-3 transition-colors hover:bg-opacity-50"
+                          style={{
+                            backgroundColor: resultIndex % 2 === 0 ? 'transparent' : `${currentTheme.colors.surface}20`,
+                            borderTopWidth: '1px',
+                            borderTopStyle: 'solid',
+                            borderTopColor: currentTheme.colors.border,
+                          }}
+                        >
+                          <div></div>
+                          <div className="flex items-center justify-center gap-2">
+                            {getViewportIcon(result.viewport)}
+                            <span className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
+                              {result.viewport_size}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            {getStatusIcon(result.status)}
+                            <span
+                              className="text-sm font-medium capitalize"
+                              style={{ color: getStatusColor(result.status) }}
+                            >
+                              {result.status}
+                            </span>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-sm font-mono" style={{ color: currentTheme.colors.text.secondary }}>
+                              {formatDuration(result.duration_ms)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            {result.status === 'fail' && (
+                              <>
+                                <ThemedButton
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAnalyzeRootCause(result)}
+                                  data-testid={`analyze-root-cause-btn-${result.id}`}
+                                  title="AI Root Cause Analysis"
+                                >
+                                  <Brain className="w-3 h-3 mr-1" />
+                                  Analyze
+                                </ThemedButton>
+                                {!ticketLink && (
+                                  <ThemedButton
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleCreateTicket(result)}
+                                    data-testid={`create-ticket-btn-${result.id}`}
+                                  >
+                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                    Create Ticket
+                                  </ThemedButton>
+                                )}
+                              </>
+                            )}
+                            {ticketLink && (
+                              <a
+                                href={ticketLink.ticketUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg transition-colors hover:opacity-80"
+                                style={{
+                                  backgroundColor: `${currentTheme.colors.primary}20`,
+                                  color: currentTheme.colors.primary,
+                                  border: `1px solid ${currentTheme.colors.primary}`,
+                                }}
+                                data-testid={`ticket-link-${result.id}`}
+                              >
+                                <span className="capitalize">{ticketLink.trackerType}</span>
+                                <span>#{ticketLink.ticketKey}</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-center gap-2">
-                          {getStatusIcon(result.status)}
-                          <span
-                            className="text-sm font-medium capitalize"
-                            style={{ color: getStatusColor(result.status) }}
-                          >
-                            {result.status}
-                          </span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-sm font-mono" style={{ color: currentTheme.colors.text.secondary }}>
-                            {formatDuration(result.duration_ms)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </td>
                 </motion.tr>
               ))}
@@ -172,6 +272,27 @@ export function TestResultsTable({ results }: TestResultsTableProps) {
           </table>
         </div>
       </ThemedCardContent>
+
+      {/* Create Ticket Modal */}
+      {selectedResult && (
+        <CreateTicketModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          testResult={selectedResult}
+          testSuiteName={testSuiteName}
+          targetUrl={targetUrl}
+          onTicketCreated={handleTicketCreated}
+        />
+      )}
+
+      {/* Root Cause Analysis Modal */}
+      {selectedFailureResult && (
+        <RootCauseAnalysisModal
+          isOpen={isRootCauseModalOpen}
+          onClose={() => setIsRootCauseModalOpen(false)}
+          testResult={selectedFailureResult}
+        />
+      )}
     </ThemedCard>
   );
 }

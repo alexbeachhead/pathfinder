@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ScreenshotMetadata } from '@/lib/types';
 import { X, ZoomIn, Download } from 'lucide-react';

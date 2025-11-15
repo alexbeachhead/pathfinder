@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { TestScenario } from '@/lib/types';
 import { CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';

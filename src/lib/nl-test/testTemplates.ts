@@ -5,6 +5,8 @@ export interface TestTemplate {
   category: string;
   template: string;
   placeholders: TemplatePlaceholder[];
+  difficulty?: number;         // 1-10: Difficulty score
+  estimatedTime?: number;      // Estimated completion time in seconds
 }
 
 export interface TemplatePlaceholder {
@@ -23,6 +25,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Basic Page Load Test',
     description: 'Navigate to URL and verify page loads correctly',
     category: 'Basic',
+    difficulty: 2,
+    estimatedTime: 45,
     template: `Test that {{url}} loads successfully:
 1. Go to the page
 2. Verify the page title contains "{{expected_title}}"
@@ -49,6 +53,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Form Submission Test',
     description: 'Test form with multiple fields',
     category: 'Forms',
+    difficulty: 4,
+    estimatedTime: 90,
     template: `Test the {{form_name}} form:
 1. Navigate to {{url}}
 2. Fill in {{field_1}} with {{value_1}}
@@ -105,6 +111,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Login Flow Test',
     description: 'Standard login test',
     category: 'Authentication',
+    difficulty: 5,
+    estimatedTime: 75,
     template: `Test user login:
 1. Go to {{login_url}}
 2. Enter username: {{username}}
@@ -149,6 +157,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Responsive Layout Test',
     description: 'Test across multiple viewports',
     category: 'Visual',
+    difficulty: 3,
+    estimatedTime: 60,
     template: `Test responsive design:
 1. Navigate to {{url}}
 2. Verify layout at mobile size (375px)
@@ -170,6 +180,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Add to Cart Test',
     description: 'Test adding product to shopping cart',
     category: 'E-commerce',
+    difficulty: 6,
+    estimatedTime: 120,
     template: `Test adding product to cart:
 1. Navigate to {{product_url}}
 2. Verify product {{product_name}} is displayed
@@ -206,6 +218,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Search Functionality Test',
     description: 'Test search with query and results',
     category: 'Search',
+    difficulty: 5,
+    estimatedTime: 90,
     template: `Test search functionality:
 1. Navigate to {{url}}
 2. Enter "{{search_query}}" in the search field
@@ -243,6 +257,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Navigation Menu Test',
     description: 'Test main navigation menu links',
     category: 'Navigation',
+    difficulty: 3,
+    estimatedTime: 60,
     template: `Test navigation menu:
 1. Navigate to {{url}}
 2. Verify main menu is visible
@@ -286,6 +302,8 @@ export const TEST_TEMPLATES: TestTemplate[] = [
     name: 'Modal Interaction Test',
     description: 'Test opening and closing modals',
     category: 'Interaction',
+    difficulty: 4,
+    estimatedTime: 75,
     template: `Test modal interaction:
 1. Navigate to {{url}}
 2. Click on "{{trigger_element}}" to open modal
@@ -353,4 +371,33 @@ export function fillTemplate(template: TestTemplate, values: Record<string, stri
   }
 
   return filled;
+}
+
+/**
+ * Import a flow-builder generated template into the template system
+ * This allows flows created visually to be consumed as templates
+ */
+export function importFlowAsTemplate(flowTemplate: TestTemplate): void {
+  // Check if template already exists
+  const existingIndex = TEST_TEMPLATES.findIndex(t => t.id === flowTemplate.id);
+
+  if (existingIndex >= 0) {
+    // Update existing template
+    TEST_TEMPLATES[existingIndex] = flowTemplate;
+  } else {
+    // Add new template
+    TEST_TEMPLATES.push(flowTemplate);
+  }
+}
+
+/**
+ * Remove a template by ID
+ */
+export function removeTemplate(id: string): boolean {
+  const index = TEST_TEMPLATES.findIndex(t => t.id === id);
+  if (index >= 0) {
+    TEST_TEMPLATES.splice(index, 1);
+    return true;
+  }
+  return false;
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Copy, Download, Save, Edit3, Check } from 'lucide-react';

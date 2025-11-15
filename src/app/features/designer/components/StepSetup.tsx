@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { Wand2 } from 'lucide-react';

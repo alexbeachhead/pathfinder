@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import {
   Image,

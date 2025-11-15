@@ -1,18 +1,22 @@
 export interface ExamplePrompt {
   text: string;
   category: string;
+  difficulty?: number;      // 1-10: Difficulty score
+  estimatedTime?: number;   // Estimated completion time in seconds
 }
 
 export interface ExampleCategory {
   category: string;
   description: string;
   examples: string[];
+  baseDifficulty?: number;  // Base difficulty for category
 }
 
 export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Navigation',
     description: 'Test navigation menus, links, and page routing',
+    baseDifficulty: 3,
     examples: [
       'Test the main navigation menu on desktop',
       'Verify all footer links work correctly',
@@ -24,6 +28,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Forms',
     description: 'Test form submissions, validations, and user input',
+    baseDifficulty: 4,
     examples: [
       'Test the contact form with valid data',
       'Test form validation with empty fields',
@@ -35,6 +40,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'E-commerce',
     description: 'Test shopping cart, checkout, and product interactions',
+    baseDifficulty: 6,
     examples: [
       'Test adding a product to cart',
       'Test the checkout flow on mobile',
@@ -46,6 +52,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'User Authentication',
     description: 'Test login, logout, signup, and password flows',
+    baseDifficulty: 5,
     examples: [
       'Test login with valid credentials',
       'Test login with invalid password',
@@ -57,6 +64,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Visual Checks',
     description: 'Test visual elements, layouts, and responsive design',
+    baseDifficulty: 2,
     examples: [
       'Check if all images load on the homepage',
       'Verify the hero section displays correctly',
@@ -68,6 +76,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Search & Filtering',
     description: 'Test search functionality and filter options',
+    baseDifficulty: 5,
     examples: [
       'Test product search with valid query',
       'Verify search results update as you type',
@@ -79,6 +88,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Modal & Popups',
     description: 'Test modals, dialogs, tooltips, and popup interactions',
+    baseDifficulty: 4,
     examples: [
       'Test opening and closing modal dialog',
       'Verify cookie consent banner appears',
@@ -90,6 +100,7 @@ export const EXAMPLE_PROMPTS: ExampleCategory[] = [
   {
     category: 'Accessibility',
     description: 'Test keyboard navigation, ARIA labels, and screen reader support',
+    baseDifficulty: 7,
     examples: [
       'Test keyboard navigation through form fields',
       'Verify skip to content link works',

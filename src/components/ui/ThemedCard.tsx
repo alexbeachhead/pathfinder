@@ -2,7 +2,7 @@
 
 import { ReactNode, HTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { scaleIn } from '@/lib/animations';
 
 export type CardVariant = 'default' | 'bordered' | 'glass' | 'glow';

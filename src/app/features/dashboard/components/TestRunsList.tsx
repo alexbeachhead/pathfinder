@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useNavigation } from '@/contexts/NavigationContext';
+import { useTheme } from '@/lib/stores/appStore';
+import { useNavigation } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';

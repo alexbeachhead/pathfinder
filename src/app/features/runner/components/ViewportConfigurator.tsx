@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Monitor, Tablet, Smartphone, CheckSquare, Square } from 'lucide-react';
 
@@ -35,9 +35,9 @@ export function ViewportConfigurator({ selectedViewports, onViewportsChange }: V
   };
 
   return (
-    <ThemedCard variant="bordered">
+    <div>
       <ThemedCardHeader
-        title="Viewport Configuration"
+        title="Viewport Config"
         subtitle={`${selectedViewports.filter(v => v.enabled).length} selected`}
       />
       <ThemedCardContent>
@@ -51,7 +51,7 @@ export function ViewportConfigurator({ selectedViewports, onViewportsChange }: V
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2, delay: index * 0.05 }}
                 onClick={() => toggleViewport(viewport.id)}
-                className="w-full flex items-center justify-between p-3 rounded-lg transition-all"
+                className="w-full flex items-center justify-between p-1 rounded-lg transition-all"
                 style={{
                   backgroundColor: viewport.enabled ? `${currentTheme.colors.primary}10` : currentTheme.colors.surface,
                   borderWidth: '1px',
@@ -80,6 +80,6 @@ export function ViewportConfigurator({ selectedViewports, onViewportsChange }: V
           })}
         </div>
       </ThemedCardContent>
-    </ThemedCard>
+    </div>
   );
 }

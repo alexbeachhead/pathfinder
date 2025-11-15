@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { Activity, Loader2, CheckCircle2, AlertCircle, Target } from 'lucide-react';
@@ -14,7 +14,7 @@ import { TestRunsList } from './components/TestRunsList';
 import { getDashboardStats, getRecentTestRuns, getQualityTrends, getIssuesByCategory, type TestRunSummary, type DashboardStats, type QualityTrendPoint, type IssuesByCategory } from '@/lib/supabase/dashboard';
 
 export function Dashboard() {
-  const { currentTheme } = useTheme();
+  const { currentTheme, setHealthGlow } = useTheme();
   const [loading, setLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentRuns, setRecentRuns] = useState<TestRunSummary[]>([]);
@@ -39,10 +39,26 @@ export function Dashboard() {
       setRecentRuns(runs.runs);
       setQualityTrends(trends);
       setIssuesByCategory(issues);
+
+      // Calculate overall health based on pass rate
+      updateHealthGlow(stats.passRate);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Update health glow based on pass rate thresholds
+  const updateHealthGlow = (passRate: number) => {
+    if (passRate >= 90) {
+      setHealthGlow('excellent'); // Green glow for 90%+
+    } else if (passRate >= 70) {
+      setHealthGlow('good'); // Yellow glow for 70-90%
+    } else if (passRate > 0) {
+      setHealthGlow('poor'); // Red glow for below 70%
+    } else {
+      setHealthGlow('none'); // No glow if no data
     }
   };
 
@@ -94,7 +110,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-8 dashboard-health-glow" data-testid="dashboard-container">
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

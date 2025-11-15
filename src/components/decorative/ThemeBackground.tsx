@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { motion } from 'framer-motion';
 
 export function ThemeBackground() {

@@ -183,3 +183,17 @@ export interface ScreenshotMetadata {
   base64?: string;
   screenshotUrl?: string;
 }
+
+// Issue Tracker Integration Types
+
+export type IssueTrackerType = 'jira' | 'github' | 'trello';
+
+export interface TestIssueLink {
+  id: string;
+  result_id: string;
+  ticket_id: string;
+  tracker_type: IssueTrackerType;
+  ticket_url: string;
+  ticket_key: string;
+  created_at: string;
+}

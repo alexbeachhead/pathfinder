@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { CheckCircle2 } from 'lucide-react';

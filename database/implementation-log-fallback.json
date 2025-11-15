@@ -1,0 +1,20 @@
+[
+  {
+    "id": "a7f3e821-9c54-4d2b-8f61-3e4d7a9b2c1f",
+    "project_id": "108b16e3-019b-469c-a329-47138d60a21f",
+    "requirement_name": "health-based-dashboard-glow",
+    "title": "Health-Based Dashboard Glow",
+    "overview": "Implemented an ambient health-based glow effect for the dashboard that provides instant visual feedback on test suite health. The feature computes overall pass-rate from quality metrics and applies dynamic CSS styling with three threshold levels: green glow for 90%+ pass rate (excellent), yellow glow for 70-90% (good), and red glow for below 70% (poor). Extended ThemeContext.tsx to manage health glow state with new HealthGlowStatus type and getHealthGlowColor() method. Updated Dashboard.tsx to calculate pass-rate from dashboard stats and trigger updateHealthGlow() which sets appropriate glow status. Added CSS keyframe animations in globals.css with glow-pulse animation that smoothly transitions between states over 4 seconds. The glow uses CSS variables (--health-glow-color) for smooth color transitions and includes both box-shadow effects and a pseudo-element background layer. The implementation is non-intrusive, using subtle opacity and layered shadows to create an ambient visual cue that enhances the dashboard experience without cluttering the layout. Added data-testid to dashboard container for testing support.",
+    "tested": 0,
+    "created_at": "2025-11-14T20:51:02.981Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "project_id": "108b16e3-019b-469c-a329-47138d60a21f",
+    "requirement_name": "first-run-interactive-tour",
+    "title": "Reports Interactive Tour",
+    "overview": "Implemented a first-run interactive tour modal for the Reports feature. Created TourModal component with carousel functionality showcasing 7 key sections: Overview, ReportOverview, AI Visual Analysis, ErrorTimeline, ScreenshotComparison, ViewportGrid, and TestResultsTable. The tour uses ThemedButton and ThemedCard components to maintain consistent styling with the existing design system. Integrated localStorage persistence with key \"pathfinder-reports-tour-completed\" to ensure the tour only appears on first visit. Added comprehensive data-testid attributes throughout the tour modal and Reports.tsx for automated testing. The modal features smooth animations using Framer Motion, progress indicators, and navigation controls (previous, next, skip, and finish). The tour component follows the existing glassmorphism design pattern with proper theme integration.",
+    "tested": 0,
+    "created_at": "2025-11-14T20:55:39.474Z"
+  }
+]

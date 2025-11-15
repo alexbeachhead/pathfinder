@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
-import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
+import { useTheme } from '@/lib/stores/appStore';
+import { ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { getTestSuites } from '@/lib/supabase/testSuites';
 import { TestSuite } from '@/lib/types';
-import { FileCode, Search, ExternalLink, Calendar } from 'lucide-react';
+import { FileCode, Search } from 'lucide-react';
+import { TestSuiteItem } from './TestSuiteItem';
 
 interface TestSuiteSelectorProps {
   selectedSuite: TestSuite | null;
@@ -41,7 +41,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
   );
 
   return (
-    <ThemedCard variant="bordered">
+    <div>
       <ThemedCardHeader
         title="Test Suite Selection"
         subtitle={`${suites.length} suite${suites.length !== 1 ? 's' : ''} available`}
@@ -71,7 +71,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
         </div>
 
         {/* Suite List */}
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-[90vh] overflow-y-hidden">
           {loading ? (
             <div className="text-center py-8" style={{ color: currentTheme.colors.text.tertiary }}>
               Loading test suites...
@@ -82,59 +82,18 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
             </div>
           ) : (
             filteredSuites.map((suite, index) => (
-              <motion.button
+              <TestSuiteItem
                 key={suite.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
+                suite={suite}
+                isSelected={selectedSuite?.id === suite.id}
                 onClick={() => onSelectSuite(selectedSuite?.id === suite.id ? null : suite)}
-                className="w-full text-left p-4 rounded-lg transition-all"
-                style={{
-                  backgroundColor:
-                    selectedSuite?.id === suite.id
-                      ? `${currentTheme.colors.primary}15`
-                      : currentTheme.colors.surface,
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor:
-                    selectedSuite?.id === suite.id
-                      ? currentTheme.colors.primary
-                      : currentTheme.colors.border,
-                }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-sm" style={{ color: currentTheme.colors.text.primary }}>
-                    {suite.name}
-                  </h4>
-                  {selectedSuite?.id === suite.id && (
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: currentTheme.colors.primary }}
-                    />
-                  )}
-                </div>
-
-                {suite.description && (
-                  <p className="text-xs mb-2 line-clamp-2" style={{ color: currentTheme.colors.text.secondary }}>
-                    {suite.description}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-1 text-xs" style={{ color: currentTheme.colors.text.tertiary }}>
-                    <ExternalLink className="w-3 h-3" />
-                    <span className="truncate max-w-[200px]">{suite.target_url}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs" style={{ color: currentTheme.colors.text.tertiary }}>
-                    <Calendar className="w-3 h-3" />
-                    <span>{new Date(suite.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </motion.button>
+                theme={currentTheme}
+                index={index}
+              />
             ))
           )}
         </div>
       </ThemedCardContent>
-    </ThemedCard>
+    </div>
   );
 }

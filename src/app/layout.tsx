@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { NavigationProvider } from "@/contexts/NavigationContext";
+import { StoreInitializer } from "@/lib/stores/StoreInitializer";
 import { ThemeBackground } from "@/components/decorative/ThemeBackground";
 import { MainLayout } from "@/components/layout/MainLayout";
 
@@ -31,12 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          <NavigationProvider>
-            <ThemeBackground />
-            <MainLayout>{children}</MainLayout>
-          </NavigationProvider>
-        </ThemeProvider>
+        <StoreInitializer />
+        <ThemeBackground />
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   );

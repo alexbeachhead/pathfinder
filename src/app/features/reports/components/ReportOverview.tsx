@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
 import { ReportData } from '../lib/mockData';
 import { CheckCircle2, XCircle, Clock, TrendingUp, Monitor } from 'lucide-react';

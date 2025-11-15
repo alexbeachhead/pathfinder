@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeIntent } from '@/lib/nl-test/intentAnalyzer';
+import { parseIntent } from '@/lib/nl-test/testEngine';
 
 export const maxDuration = 60; // 1 minute
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Analyze intent
-    const analysis = await analyzeIntent(description, targetUrl);
+    const analysis = await parseIntent(description, targetUrl);
 
     return NextResponse.json({
       success: true,

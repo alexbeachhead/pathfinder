@@ -2,7 +2,7 @@
 
 import { ReactNode, ButtonHTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { Loader2 } from 'lucide-react';
 
 export type ButtonSize = 'sm' | 'md' | 'lg';

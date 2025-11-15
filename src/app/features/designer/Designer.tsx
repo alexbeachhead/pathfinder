@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
 import { StepIndicator } from './components/StepIndicator';
 import { StepSetup } from './components/StepSetup';

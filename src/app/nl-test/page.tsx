@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
-import MainLayout from '@/components/layout/MainLayout';
+import { useTheme } from '@/lib/stores/appStore';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Badge } from '@/components/ui/Badge';
-import { TestCodeEditor } from '@/components/designer/TestCodeEditor';
+import { TestCodeEditor } from '@/app/features/designer/components/TestCodeEditor';
 import {
   Wand2,
   Sparkles,
@@ -18,15 +18,16 @@ import {
   FileText,
   Play,
   Save,
+  TrendingUp,
+  Workflow,
 } from 'lucide-react';
-import { EXAMPLE_PROMPTS, type ExampleCategory } from '@/lib/nl-test/examplePrompts';
-import {
-  TEST_TEMPLATES,
-  getTemplateCategories,
-  fillTemplate,
-  type TestTemplate,
-} from '@/lib/nl-test/testTemplates';
-import type { IntentAnalysis } from '@/lib/nl-test/intentAnalyzer';
+import { useTestEngine } from '@/lib/nl-test/hooks/useTestEngine';
+import type { TestTemplate, ExampleCategory } from '@/lib/nl-test/testEngine';
+import { useAdaptiveDifficulty } from '@/app/features/nl-test/components/AdaptiveDifficultyContext';
+import { PerformanceStats } from '@/app/features/nl-test/components/PerformanceStats';
+import { AdaptivePromptSelector } from '@/app/features/nl-test/components/AdaptivePromptSelector';
+import { calculateDifficultyScore } from '@/app/features/nl-test/lib/difficultyScoring';
+import { DifficultyBadge } from '@/app/features/nl-test/components/DifficultyBadge';
 
 const VIEWPORTS = [
   'Mobile (375x667)',
@@ -39,103 +40,59 @@ const VIEWPORTS = [
 
 export default function NLTestPage() {
   const { currentTheme } = useTheme();
+  const { userStats, startPrompt } = useAdaptiveDifficulty();
+
+  // Use centralized test engine hook
+  const testEngine = useTestEngine({ memoizeExamples: true, memoizeTemplates: true });
+
   const [description, setDescription] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [viewport, setViewport] = useState('Desktop HD (1920x1080)');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [testName, setTestName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<IntentAnalysis | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showExamples, setShowExamples] = useState(true);
+  const [showExamples, setShowExamples] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showAdaptive, setShowAdaptive] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<TestTemplate | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
+  const [currentDifficulty, setCurrentDifficulty] = useState<ReturnType<typeof calculateDifficultyScore> | null>(null);
 
   const handleAnalyze = async () => {
-    if (!description.trim()) {
-      setError('Please enter a test description');
-      return;
-    }
-
-    try {
-      setAnalyzing(true);
-      setError(null);
-      setAnalysis(null);
-
-      const response = await fetch('/api/gemini/analyze-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description, targetUrl }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze intent');
-      }
-
-      setAnalysis(data.analysis);
-    } catch (err: any) {
-      console.error('Analysis error:', err);
-      setError(err.message);
-    } finally {
-      setAnalyzing(false);
-    }
+    await testEngine.analyze(description, targetUrl);
   };
 
   const handleGenerate = async () => {
-    if (!description.trim()) {
-      setError('Please enter a test description');
-      return;
-    }
-
-    if (!targetUrl.trim()) {
-      setError('Please enter a target URL');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      setGeneratedCode('');
-
-      const response = await fetch('/api/gemini/nl-to-playwright', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description,
-          targetUrl,
-          viewport,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate test code');
-      }
-
-      setGeneratedCode(data.code);
-      setTestName(data.testName);
-
-      // Show success message if provided
-      if (data.message) {
-        console.log(data.message);
-      }
-    } catch (err: any) {
-      console.error('Generation error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    await testEngine.generate(description, targetUrl, viewport);
   };
 
   const handleUseExample = (example: string) => {
     setDescription(example);
     setShowExamples(false);
+    setShowAdaptive(false);
+
+    // Calculate difficulty for this prompt
+    const difficulty = calculateDifficultyScore(example, 'General');
+    setCurrentDifficulty(difficulty);
+
     // Auto-analyze when example is selected
+    setTimeout(() => {
+      handleAnalyze();
+    }, 500);
+  };
+
+  const handleUseAdaptivePrompt = (promptText: string) => {
+    setDescription(promptText);
+    setShowAdaptive(false);
+    setShowExamples(false);
+
+    // Calculate and set difficulty
+    const difficulty = calculateDifficultyScore(promptText, 'General');
+    setCurrentDifficulty(difficulty);
+
+    // Track prompt start
+    const stepCount = (promptText.match(/\d+\./g) || []).length;
+    const estimatedTime = difficulty.overall * stepCount * 15;
+    startPrompt(`adaptive-${Date.now()}`, estimatedTime);
+
+    // Auto-analyze
     setTimeout(() => {
       handleAnalyze();
     }, 500);
@@ -144,7 +101,7 @@ export default function NLTestPage() {
   const handleUseTemplate = () => {
     if (!selectedTemplate) return;
 
-    const filled = fillTemplate(selectedTemplate, templateValues);
+    const filled = testEngine.buildTemplate(selectedTemplate, templateValues);
     setDescription(filled);
 
     // Extract URL from template values if available
@@ -175,6 +132,19 @@ export default function NLTestPage() {
               Describe your test in plain English, and AI will generate the code
             </p>
           </div>
+
+          <a
+            href="/flow-builder"
+            className="px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
+            style={{
+              backgroundColor: currentTheme.colors.accent,
+              color: '#ffffff',
+            }}
+            data-testid="open-flow-builder-btn"
+          >
+            <Workflow className="w-4 h-4" />
+            Visual Flow Builder
+          </a>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -187,9 +157,35 @@ export default function NLTestPage() {
                 subtitle="Tell us what you want to test in plain English"
                 icon={<FileText className="w-5 h-5" />}
                 action={
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {currentDifficulty && (
+                      <DifficultyBadge level={currentDifficulty.level} score={currentDifficulty.overall} showScore />
+                    )}
                     <button
-                      onClick={() => setShowExamples(!showExamples)}
+                      onClick={() => {
+                        setShowAdaptive(!showAdaptive);
+                        setShowExamples(false);
+                        setShowTemplates(false);
+                      }}
+                      className="text-xs px-3 py-1 rounded transition-colors flex items-center gap-1"
+                      style={{
+                        backgroundColor: showAdaptive ? currentTheme.colors.primary : currentTheme.colors.surface,
+                        color: showAdaptive ? '#ffffff' : currentTheme.colors.text.secondary,
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: currentTheme.colors.border,
+                      }}
+                      data-testid="toggle-adaptive-btn"
+                    >
+                      <TrendingUp className="w-3 h-3" />
+                      {showAdaptive ? 'Hide' : 'AI'} Recommended
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExamples(!showExamples);
+                        setShowAdaptive(false);
+                        setShowTemplates(false);
+                      }}
                       className="text-xs px-3 py-1 rounded transition-colors"
                       style={{
                         backgroundColor: showExamples ? currentTheme.colors.primary : currentTheme.colors.surface,
@@ -198,11 +194,16 @@ export default function NLTestPage() {
                         borderStyle: 'solid',
                         borderColor: currentTheme.colors.border,
                       }}
+                      data-testid="toggle-examples-btn"
                     >
                       {showExamples ? 'Hide' : 'Show'} Examples
                     </button>
                     <button
-                      onClick={() => setShowTemplates(!showTemplates)}
+                      onClick={() => {
+                        setShowTemplates(!showTemplates);
+                        setShowAdaptive(false);
+                        setShowExamples(false);
+                      }}
                       className="text-xs px-3 py-1 rounded transition-colors"
                       style={{
                         backgroundColor: showTemplates ? currentTheme.colors.primary : currentTheme.colors.surface,
@@ -211,6 +212,7 @@ export default function NLTestPage() {
                         borderStyle: 'solid',
                         borderColor: currentTheme.colors.border,
                       }}
+                      data-testid="toggle-templates-btn"
                     >
                       {showTemplates ? 'Hide' : 'Show'} Templates
                     </button>
@@ -281,7 +283,7 @@ export default function NLTestPage() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleAnalyze}
-                      disabled={analyzing || !description.trim()}
+                      disabled={testEngine.analyzing || !description.trim()}
                       className="flex-1 px-6 py-3 rounded text-sm font-medium transition-all flex items-center justify-center gap-2"
                       style={{
                         backgroundColor: currentTheme.colors.surface,
@@ -289,10 +291,11 @@ export default function NLTestPage() {
                         borderWidth: '1px',
                         borderStyle: 'solid',
                         borderColor: currentTheme.colors.border,
-                        opacity: (analyzing || !description.trim()) ? 0.5 : 1,
+                        opacity: (testEngine.analyzing || !description.trim()) ? 0.5 : 1,
                       }}
+                      data-testid="analyze-description-btn"
                     >
-                      {analyzing ? (
+                      {testEngine.analyzing ? (
                         <>
                           <LoadingSpinner size="sm" />
                           Analyzing...
@@ -307,15 +310,16 @@ export default function NLTestPage() {
 
                     <button
                       onClick={handleGenerate}
-                      disabled={loading || !description.trim() || !targetUrl.trim()}
+                      disabled={testEngine.generating || !description.trim() || !targetUrl.trim()}
                       className="flex-1 px-6 py-3 rounded text-sm font-medium transition-all flex items-center justify-center gap-2"
                       style={{
                         backgroundColor: currentTheme.colors.primary,
                         color: '#ffffff',
-                        opacity: (loading || !description.trim() || !targetUrl.trim()) ? 0.5 : 1,
+                        opacity: (testEngine.generating || !description.trim() || !targetUrl.trim()) ? 0.5 : 1,
                       }}
+                      data-testid="generate-test-btn"
                     >
-                      {loading ? (
+                      {testEngine.generating ? (
                         <>
                           <LoadingSpinner size="sm" />
                           Generating...
@@ -329,7 +333,7 @@ export default function NLTestPage() {
                     </button>
                   </div>
 
-                  {error && (
+                  {(testEngine.analysisError || testEngine.generationError) && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -340,6 +344,7 @@ export default function NLTestPage() {
                         borderStyle: 'solid',
                         borderColor: '#ef444430',
                       }}
+                      data-testid="error-message"
                     >
                       <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#ef4444' }} />
                       <div>
@@ -347,7 +352,7 @@ export default function NLTestPage() {
                           Error
                         </p>
                         <p className="text-xs mt-1" style={{ color: currentTheme.colors.text.secondary }}>
-                          {error}
+                          {testEngine.analysisError || testEngine.generationError}
                         </p>
                       </div>
                     </motion.div>
@@ -357,7 +362,7 @@ export default function NLTestPage() {
             </ThemedCard>
 
             {/* Analysis Results */}
-            {analysis && (
+            {testEngine.analysis && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -365,10 +370,10 @@ export default function NLTestPage() {
                 <ThemedCard variant="bordered">
                   <ThemedCardHeader
                     title="Analysis Results"
-                    subtitle={`Confidence: ${analysis.confidence}%`}
+                    subtitle={`Confidence: ${testEngine.analysis.confidence}%`}
                     icon={<Sparkles className="w-5 h-5" />}
                     action={
-                      analysis.isValid ? (
+                      testEngine.analysis.isValid ? (
                         <Badge variant="success">Valid</Badge>
                       ) : (
                         <Badge variant="error">Needs Review</Badge>
@@ -382,17 +387,17 @@ export default function NLTestPage() {
                         <p className="text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.primary }}>
                           Test Type:
                         </p>
-                        <Badge variant="secondary">{analysis.testType}</Badge>
+                        <Badge variant="secondary">{testEngine.analysis.testType}</Badge>
                       </div>
 
                       {/* Parsed Steps */}
-                      {analysis.steps.length > 0 && (
+                      {testEngine.analysis.steps.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.primary }}>
                             Parsed Steps:
                           </p>
                           <div className="space-y-2">
-                            {analysis.steps.map((step, idx) => (
+                            {testEngine.analysis.steps.map((step, idx) => (
                               <div
                                 key={idx}
                                 className="p-3 rounded flex items-start gap-3"
@@ -429,14 +434,14 @@ export default function NLTestPage() {
                       )}
 
                       {/* Warnings */}
-                      {analysis.warnings.length > 0 && (
+                      {testEngine.analysis.warnings.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2 flex items-center gap-2" style={{ color: currentTheme.colors.text.primary }}>
                             <AlertTriangle className="w-4 h-4" style={{ color: '#f59e0b' }} />
                             Warnings:
                           </p>
                           <ul className="space-y-1">
-                            {analysis.warnings.map((warning, idx) => (
+                            {testEngine.analysis.warnings.map((warning, idx) => (
                               <li key={idx} className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
                                 • {warning}
                               </li>
@@ -446,14 +451,14 @@ export default function NLTestPage() {
                       )}
 
                       {/* Suggestions */}
-                      {analysis.suggestions.length > 0 && (
+                      {testEngine.analysis.suggestions.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2 flex items-center gap-2" style={{ color: currentTheme.colors.text.primary }}>
                             <Lightbulb className="w-4 h-4" style={{ color: currentTheme.colors.accent }} />
                             Suggestions:
                           </p>
                           <ul className="space-y-1">
-                            {analysis.suggestions.map((suggestion, idx) => (
+                            {testEngine.analysis.suggestions.map((suggestion, idx) => (
                               <li key={idx} className="text-sm" style={{ color: currentTheme.colors.text.secondary }}>
                                 • {suggestion}
                               </li>
@@ -468,7 +473,7 @@ export default function NLTestPage() {
             )}
 
             {/* Generated Code */}
-            {generatedCode && (
+            {testEngine.generatedCode && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -476,7 +481,7 @@ export default function NLTestPage() {
                 <ThemedCard variant="bordered">
                   <ThemedCardHeader
                     title="Generated Test Code"
-                    subtitle={testName}
+                    subtitle={testEngine.testName}
                     icon={<Code className="w-5 h-5" />}
                     action={
                       <div className="flex gap-2">
@@ -489,6 +494,7 @@ export default function NLTestPage() {
                             borderStyle: 'solid',
                             borderColor: currentTheme.colors.border,
                           }}
+                          data-testid="save-test-btn"
                         >
                           <Save className="w-3 h-3" />
                           Save
@@ -499,6 +505,7 @@ export default function NLTestPage() {
                             backgroundColor: currentTheme.colors.primary,
                             color: '#ffffff',
                           }}
+                          data-testid="run-test-btn"
                         >
                           <Play className="w-3 h-3" />
                           Run Test
@@ -508,8 +515,8 @@ export default function NLTestPage() {
                   />
                   <ThemedCardContent>
                     <TestCodeEditor
-                      code={generatedCode}
-                      onChange={setGeneratedCode}
+                      code={testEngine.generatedCode}
+                      onChange={() => {}}
                       language="typescript"
                     />
                   </ThemedCardContent>
@@ -518,8 +525,26 @@ export default function NLTestPage() {
             )}
           </div>
 
-          {/* Sidebar - Examples & Templates */}
+          {/* Sidebar - Adaptive, Examples & Templates */}
           <div className="space-y-6">
+            {/* Performance Stats */}
+            {userStats.totalAttempts > 0 && (
+              <PerformanceStats stats={userStats} compact={false} />
+            )}
+
+            {/* AI-Recommended Prompts */}
+            <AnimatePresence>
+              {showAdaptive && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                >
+                  <AdaptivePromptSelector onSelectPrompt={handleUseAdaptivePrompt} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Examples */}
             <AnimatePresence>
               {showExamples && (
@@ -536,7 +561,7 @@ export default function NLTestPage() {
                     />
                     <ThemedCardContent>
                       <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                        {EXAMPLE_PROMPTS.map((category: ExampleCategory) => (
+                        {testEngine.examples.map((category: ExampleCategory) => (
                           <div key={category.category}>
                             <h3 className="text-sm font-medium mb-2" style={{ color: currentTheme.colors.text.primary }}>
                               {category.category}
@@ -554,6 +579,7 @@ export default function NLTestPage() {
                                     borderStyle: 'solid',
                                     borderColor: currentTheme.colors.border,
                                   }}
+                                  data-testid={`example-${category.category.toLowerCase().replace(/\s+/g, '-')}-${idx}`}
                                 >
                                   {example}
                                 </button>
@@ -584,7 +610,7 @@ export default function NLTestPage() {
                     />
                     <ThemedCardContent>
                       <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                        {TEST_TEMPLATES.map((template) => (
+                        {testEngine.templates.map((template) => (
                           <button
                             key={template.id}
                             onClick={() => setSelectedTemplate(template)}
@@ -599,6 +625,7 @@ export default function NLTestPage() {
                                 ? currentTheme.colors.primary
                                 : currentTheme.colors.border,
                             }}
+                            data-testid={`template-${template.id}`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div>
@@ -661,6 +688,7 @@ export default function NLTestPage() {
                                   backgroundColor: currentTheme.colors.primary,
                                   color: '#ffffff',
                                 }}
+                                data-testid="use-template-btn"
                               >
                                 Use Template
                               </button>

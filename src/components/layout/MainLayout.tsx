@@ -1,8 +1,42 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Header } from './Header';
-import { Sidebar } from './Sidebar';
+
+// Lazy-load Sidebar with dynamic import
+const Sidebar = dynamic(() => import('./Sidebar').then(mod => ({ default: mod.Sidebar })), {
+  ssr: true,
+});
+
+// Sidebar loading fallback
+function SidebarSkeleton() {
+  return (
+    <aside
+      className="sticky top-16 h-[calc(100vh-4rem)] w-64 border-r"
+      style={{
+        backgroundColor: 'var(--theme-surface)',
+        borderColor: 'var(--theme-border)',
+      }}
+    >
+      <nav className="flex h-full flex-col justify-between p-4">
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-9 w-full rounded-lg animate-pulse"
+              style={{ backgroundColor: 'var(--theme-border)' }}
+            />
+          ))}
+        </div>
+        <div
+          className="h-9 w-full rounded-lg animate-pulse"
+          style={{ backgroundColor: 'var(--theme-border)' }}
+        />
+      </nav>
+    </aside>
+  );
+}
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -13,7 +47,9 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--theme-background)' }}>
       <Header />
       <div className="flex">
-        <Sidebar />
+        <Suspense fallback={<SidebarSkeleton />}>
+          <Sidebar />
+        </Suspense>
         <main className="flex-1 overflow-x-hidden">
           <div className="container mx-auto px-6 py-8">{children}</div>
         </main>

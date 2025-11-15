@@ -26,6 +26,9 @@
   --error: #ef4444;
   --accent: #a855f7;
 
+  /* Health Glow */
+  --health-glow-color: transparent;
+
   /* Neutral grays */
   --neutral-50: #f8fafc;
   --neutral-100: #f1f5f9;
@@ -244,4 +247,37 @@ html {
 .sidebar-link-active {
   background-color: color-mix(in srgb, var(--theme-primary) 15%, transparent);
   color: var(--theme-accent);
+}
+
+/* Health-based Dashboard Glow */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 30px var(--health-glow-color),
+                0 0 60px var(--health-glow-color),
+                inset 0 0 80px var(--health-glow-color);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--health-glow-color),
+                0 0 80px var(--health-glow-color),
+                inset 0 0 100px var(--health-glow-color);
+  }
+}
+
+.dashboard-health-glow {
+  position: relative;
+  border-radius: 1rem;
+  transition: box-shadow 0.8s ease-in-out, background-color 0.8s ease-in-out;
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+.dashboard-health-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  background: var(--health-glow-color);
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.8s ease-in-out;
 }

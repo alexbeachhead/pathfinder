@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ReportOverview } from './components/ReportOverview';
@@ -12,6 +12,7 @@ import { TestResultsTable } from './components/TestResultsTable';
 import { ViewportGrid } from './components/ViewportGrid';
 import { HistoricalComparison } from './components/HistoricalComparison';
 import { IssueDashboard } from '@/components/inspector/IssueDashboard';
+import { TourModal } from './components/TourModal';
 import { mockReportData, mockErrorDetails } from './lib/mockData';
 import { getAnalysesForTestRun, getAnalysisStats } from '@/lib/supabase/aiAnalyses';
 import { exportAsJSON, exportAsCSV, exportAsMarkdown, exportAsHTML } from '@/lib/export/reportExporter';
@@ -28,10 +29,19 @@ export function Reports({ testRunId }: ReportsProps) {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [runningAnalysis, setRunningAnalysis] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // In a real app, fetch data based on testRunId
   const reportData = mockReportData;
   const errors = mockErrorDetails;
+
+  // Check if tour should be shown on first visit
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('pathfinder-reports-tour-completed');
+    if (!tourCompleted) {
+      setShowTour(true);
+    }
+  }, []);
 
   // Load AI analyses if testRunId is available
   useEffect(() => {
@@ -123,6 +133,9 @@ export function Reports({ testRunId }: ReportsProps) {
 
   return (
     <div className="p-8 space-y-8">
+      {/* Tour Modal */}
+      {showTour && <TourModal onClose={() => setShowTour(false)} />}
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -138,10 +151,10 @@ export function Reports({ testRunId }: ReportsProps) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ThemedButton variant="ghost" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+          <ThemedButton variant="ghost" size="md" leftIcon={<ArrowLeft className="w-4 h-4" />} data-testid="back-to-runner-btn">
             Back to Runner
           </ThemedButton>
-          <ThemedButton variant="secondary" size="md" leftIcon={<Share2 className="w-4 h-4" />}>
+          <ThemedButton variant="secondary" size="md" leftIcon={<Share2 className="w-4 h-4" />} data-testid="share-report-btn">
             Share
           </ThemedButton>
 
@@ -152,6 +165,7 @@ export function Reports({ testRunId }: ReportsProps) {
               size="md"
               leftIcon={<Download className="w-4 h-4" />}
               onClick={() => setShowExportMenu(!showExportMenu)}
+              data-testid="export-btn"
             >
               Export
             </ThemedButton>
@@ -187,6 +201,7 @@ export function Reports({ testRunId }: ReportsProps) {
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
+                      data-testid="export-json-btn"
                     >
                       <FileJson className="w-4 h-4" />
                       Export as JSON
@@ -201,6 +216,7 @@ export function Reports({ testRunId }: ReportsProps) {
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
+                      data-testid="export-csv-btn"
                     >
                       <FileText className="w-4 h-4" />
                       Export as CSV
@@ -215,6 +231,7 @@ export function Reports({ testRunId }: ReportsProps) {
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
+                      data-testid="export-markdown-btn"
                     >
                       <FileCode className="w-4 h-4" />
                       Export as Markdown
@@ -229,6 +246,7 @@ export function Reports({ testRunId }: ReportsProps) {
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
+                      data-testid="export-html-btn"
                     >
                       <FileText className="w-4 h-4" />
                       Export as HTML
@@ -258,6 +276,7 @@ export function Reports({ testRunId }: ReportsProps) {
                   size="sm"
                   onClick={loadAnalyses}
                   disabled={loadingAnalysis}
+                  data-testid="refresh-analysis-btn"
                 >
                   Refresh
                 </ThemedButton>
@@ -268,6 +287,7 @@ export function Reports({ testRunId }: ReportsProps) {
                 onClick={runAIAnalysis}
                 disabled={runningAnalysis}
                 leftIcon={runningAnalysis ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                data-testid="run-ai-analysis-btn"
               >
                 {runningAnalysis ? 'Analyzing...' : aiAnalyses.length > 0 ? 'Re-analyze' : 'Run AI Analysis'}
               </ThemedButton>
@@ -340,7 +360,11 @@ export function Reports({ testRunId }: ReportsProps) {
       )}
 
       {/* Test Results Table */}
-      <TestResultsTable results={reportData.results} />
+      <TestResultsTable
+        results={reportData.results}
+        testSuiteName={reportData.testSuite.name}
+        targetUrl={reportData.testSuite.target_url}
+      />
     </div>
   );
 }

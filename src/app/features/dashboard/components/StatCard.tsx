@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { StatData } from '../lib/mockData';
