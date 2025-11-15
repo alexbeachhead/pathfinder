@@ -58,6 +58,7 @@ export function ViewportConfigurator({ selectedViewports, onViewportsChange }: V
                   borderStyle: 'solid',
                   borderColor: viewport.enabled ? currentTheme.colors.primary : currentTheme.colors.border,
                 }}
+                data-testid={`viewport-toggle-${viewport.id}`}
               >
                 <div className="flex items-center gap-3">
                   {viewport.enabled ? (

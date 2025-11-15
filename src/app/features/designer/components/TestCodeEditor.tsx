@@ -27,6 +27,9 @@ export function TestCodeEditor({
   const [currentCode, setCurrentCode] = useState(code);
   const [copied, setCopied] = useState(false);
 
+  const fileExtension = language === 'javascript' ? 'js' : 'ts';
+  const displayLanguage = language === 'javascript' ? 'JavaScript' : 'TypeScript';
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(currentCode);
@@ -42,7 +45,7 @@ export function TestCodeEditor({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'test.spec.ts';
+    a.download = `test.spec.${fileExtension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -68,7 +71,7 @@ export function TestCodeEditor({
     <ThemedCard variant="bordered">
       <ThemedCardHeader
         title="Generated Test Code"
-        subtitle="Playwright TypeScript test suite"
+        subtitle={`Playwright ${displayLanguage} test suite`}
         icon={<Edit3 className="w-5 h-5" />}
         action={
           <div className="flex items-center gap-2">

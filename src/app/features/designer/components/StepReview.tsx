@@ -6,7 +6,7 @@ import { TestCodeEditor } from './TestCodeEditor';
 import { ScreenshotPreview } from './ScreenshotPreview';
 import { ScenarioPreview } from './ScenarioPreview';
 import { MiniTestRunner } from './MiniTestRunner';
-import { ScreenshotMetadata, TestScenario } from '@/lib/types';
+import { ScreenshotMetadata, TestScenario, CodeLanguage } from '@/lib/types';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { Play, Code } from 'lucide-react';
@@ -15,6 +15,7 @@ interface StepReviewProps {
   screenshots: ScreenshotMetadata[];
   scenarios: TestScenario[];
   generatedCode: string;
+  codeLanguage: CodeLanguage;
   targetUrl?: string;
   onCodeChange: (code: string) => void;
   onSave: () => void;
@@ -25,6 +26,7 @@ export function StepReview({
   screenshots,
   scenarios,
   generatedCode,
+  codeLanguage,
   targetUrl = '',
   onCodeChange,
   onSave,
@@ -95,7 +97,7 @@ export function StepReview({
             <MiniTestRunner generatedCode={generatedCode} targetUrl={targetUrl} />
           )}
           {activeTab === 'code' && (
-            <TestCodeEditor code={generatedCode} onChange={onCodeChange} onSave={onSave} />
+            <TestCodeEditor code={generatedCode} language={codeLanguage} onChange={onCodeChange} onSave={onSave} />
           )}
         </motion.div>
       )}

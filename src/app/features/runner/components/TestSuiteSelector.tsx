@@ -67,6 +67,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
               borderColor: currentTheme.colors.border,
               color: currentTheme.colors.text.primary,
             }}
+            data-testid="test-suite-search-input"
           />
         </div>
 

@@ -1,4 +1,5 @@
 import { Activity, CheckCircle2, Target, Clock, LucideIcon } from 'lucide-react';
+import { MascotConfig } from '@/lib/types';
 
 export interface StatData {
   label: string;
@@ -15,6 +16,7 @@ export interface RecentTest {
   duration: string;
   viewport: string;
   timestamp: string; // Time ago
+  mascotConfig?: MascotConfig;
 }
 
 export const stats: StatData[] = [
@@ -58,27 +60,31 @@ export const recentTests: RecentTest[] = [
     status: 'pass',
     duration: '1.8s',
     viewport: 'Desktop',
-    timestamp: '2 min ago'
+    timestamp: '2 min ago',
+    mascotConfig: { type: 'detective', colorScheme: 'default' }
   },
   {
     name: 'Checkout Process',
     status: 'pass',
     duration: '3.2s',
     viewport: 'Mobile',
-    timestamp: '5 min ago'
+    timestamp: '5 min ago',
+    mascotConfig: { type: 'wizard', colorScheme: 'default' }
   },
   {
     name: 'Product Search',
     status: 'fail',
     duration: '2.1s',
     viewport: 'Tablet',
-    timestamp: '12 min ago'
+    timestamp: '12 min ago',
+    mascotConfig: { type: 'explorer', colorScheme: 'default' }
   },
   {
     name: 'User Dashboard',
     status: 'running',
     duration: '1.5s',
     viewport: 'Desktop',
-    timestamp: 'Just now'
+    timestamp: 'Just now',
+    mascotConfig: { type: 'robot', colorScheme: 'default' }
   },
 ];

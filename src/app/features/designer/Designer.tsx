@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
@@ -9,10 +9,14 @@ import { StepSetup } from './components/StepSetup';
 import { StepAnalysis } from './components/StepAnalysis';
 import { StepReview } from './components/StepReview';
 import { StepComplete } from './components/StepComplete';
-import { ScreenshotMetadata, TestScenario } from '@/lib/types';
+import { ScreenshotMetadata, TestScenario, MascotConfig, CodeLanguage, PreviewMode } from '@/lib/types';
 import { generateTestCode } from '@/lib/playwright/generateTestCode';
 import { createTestSuite, saveTestCode } from '@/lib/supabase/testSuites';
 import { AlertCircle } from 'lucide-react';
+import { MascotAvatar } from '@/components/ui/MascotAvatar';
+import { inferMascotType } from '@/lib/mascot/mascotGenerator';
+import { BranchPicker } from './components/BranchPicker';
+import { getOrCreateDefaultBranch, createSnapshot } from '@/lib/supabase/branches';
 
 type WorkflowStep = 'setup' | 'analyzing' | 'review' | 'complete';
 
@@ -29,6 +33,11 @@ export function Designer() {
   const [testSuiteName, setTestSuiteName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>('typescript');
+  const [mascotConfig, setMascotConfig] = useState<MascotConfig>({
+    type: 'robot',
+    colorScheme: 'default',
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [screenshots, setScreenshots] = useState<ScreenshotMetadata[]>([]);
   const [scenarios, setScenarios] = useState<TestScenario[]>([]);
@@ -38,6 +47,31 @@ export function Designer() {
   const [savedSuiteId, setSavedSuiteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [estimatedDurationMs, setEstimatedDurationMs] = useState<number>(300000); // Default 5 minutes
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('lightweight');
+
+  // Load preview mode preference from localStorage
+  useEffect(() => {
+    const savedPreviewMode = localStorage.getItem('pathfinder-preview-mode');
+    if (savedPreviewMode === 'lightweight' || savedPreviewMode === 'full') {
+      setPreviewMode(savedPreviewMode);
+    }
+  }, []);
+
+  // Save preview mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('pathfinder-preview-mode', previewMode);
+  }, [previewMode]);
+
+  // Auto-infer mascot type when test suite name or description changes
+  useEffect(() => {
+    if (testSuiteName && mascotConfig.colorScheme === 'default') {
+      const inferredType = inferMascotType(testSuiteName, description);
+      if (inferredType !== mascotConfig.type) {
+        setMascotConfig((prev) => ({ ...prev, type: inferredType }));
+      }
+    }
+  }, [testSuiteName, description]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -87,12 +121,12 @@ export function Designer() {
         setEstimatedDurationMs(300000); // Fallback to 5 minutes
       }
 
-      setProgressMessage('Capturing screenshots across viewports...');
+      setProgressMessage(previewMode === 'lightweight' ? 'Capturing lightweight previews...' : 'Capturing full screenshots...');
       setProgress(10);
       const screenshotRes = await fetch('/api/screenshots/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl }),
+        body: JSON.stringify({ url: targetUrl, previewMode }),
       });
 
       if (!screenshotRes.ok) {
@@ -125,7 +159,7 @@ export function Designer() {
       setProgress(70);
 
       setProgressMessage('Generating Playwright test code...');
-      const code = generateTestCode(testSuiteName, targetUrl, analysisData.scenarios);
+      const code = generateTestCode(testSuiteName, targetUrl, analysisData.scenarios, codeLanguage);
       setGeneratedCode(code);
       setProgress(100);
 
@@ -143,8 +177,30 @@ export function Designer() {
         name: testSuiteName,
         target_url: targetUrl,
         description,
+        mascot_config: mascotConfig,
       });
-      await saveTestCode(suiteId, generatedCode);
+
+      // Ensure default branch exists
+      const defaultBranch = await getOrCreateDefaultBranch(suiteId);
+      setSelectedBranchId(defaultBranch.id);
+
+      // Save test code with language preference
+      await saveTestCode(suiteId, generatedCode, codeLanguage);
+
+      // Create snapshot for the branch
+      const { data: latestCode } = await fetch(`/api/supabase/test-code/${suiteId}/latest`).then(r => r.json()).catch(() => ({ data: null }));
+      if (latestCode) {
+        await createSnapshot({
+          branch_id: defaultBranch.id,
+          test_code_id: latestCode.id,
+          suite_config: {
+            name: testSuiteName,
+            target_url: targetUrl,
+            description,
+          },
+        });
+      }
+
       setSavedSuiteId(suiteId);
       setCurrentStep('complete');
     } catch (err) {
@@ -158,6 +214,8 @@ export function Designer() {
     setTestSuiteName('');
     setTargetUrl('');
     setDescription('');
+    setCodeLanguage('typescript');
+    setMascotConfig({ type: 'robot', colorScheme: 'default' });
     setScreenshots([]);
     setScenarios([]);
     setGeneratedCode('');
@@ -171,10 +229,32 @@ export function Designer() {
 
   return (
     <div className="p-8 space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-bold mb-2" style={{ color: currentTheme.colors.text.primary }}>
-          Visual Test Designer
-        </h1>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
+        {testSuiteName && (
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            data-testid="designer-mascot"
+          >
+            <MascotAvatar config={mascotConfig} size="xl" animate={true} />
+          </motion.div>
+        )}
+        <div>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: currentTheme.colors.text.primary }}>
+            Visual Test Designer
+          </h1>
+          {testSuiteName && (
+            <motion.p
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-lg"
+              style={{ color: currentTheme.colors.text.secondary }}
+            >
+              {testSuiteName}
+            </motion.p>
+          )}
+        </div>
       </motion.div>
 
       {/* UI Improvement 1: Step Indicator */}
@@ -200,6 +280,12 @@ export function Designer() {
           setTargetUrl={setTargetUrl}
           description={description}
           setDescription={setDescription}
+          mascotConfig={mascotConfig}
+          setMascotConfig={setMascotConfig}
+          codeLanguage={codeLanguage}
+          setCodeLanguage={setCodeLanguage}
+          previewMode={previewMode}
+          setPreviewMode={setPreviewMode}
           errors={errors}
           onStartAnalysis={startAnalysis}
         />
@@ -214,6 +300,7 @@ export function Designer() {
           screenshots={screenshots}
           scenarios={scenarios}
           generatedCode={generatedCode}
+          codeLanguage={codeLanguage}
           targetUrl={targetUrl}
           onCodeChange={setGeneratedCode}
           onSave={handleSaveTests}
@@ -224,6 +311,9 @@ export function Designer() {
       {currentStep === 'complete' && (
         <StepComplete
           testSuiteName={testSuiteName}
+          targetUrl={targetUrl}
+          codeLanguage={codeLanguage}
+          generatedCode={generatedCode}
           onReset={resetWorkflow}
           onRunTests={() => {}}
         />

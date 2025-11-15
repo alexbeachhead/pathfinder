@@ -1,4 +1,6 @@
-import { TestScenario, TestStep } from '../types';
+import { TestScenario, TestStep, CodeLanguage, PluginStepData } from '../types';
+import { generatePluginCode } from '../plugins/pluginCodeGenerator';
+import { getPlugin } from '../plugins/pluginRegistry';
 
 /**
  * Generate Playwright test code from AI-generated test scenarios
@@ -6,10 +8,11 @@ import { TestScenario, TestStep } from '../types';
 export function generateTestCode(
   suiteName: string,
   targetUrl: string,
-  scenarios: TestScenario[]
+  scenarios: TestScenario[],
+  language: CodeLanguage = 'typescript'
 ): string {
-  const imports = generateImports();
-  const testSuite = generateTestSuite(suiteName, targetUrl, scenarios);
+  const imports = generateImports(language);
+  const testSuite = generateTestSuite(suiteName, targetUrl, scenarios, language);
 
   return `${imports}\n\n${testSuite}`;
 }
@@ -17,7 +20,10 @@ export function generateTestCode(
 /**
  * Generate import statements
  */
-function generateImports(): string {
+function generateImports(language: CodeLanguage): string {
+  if (language === 'javascript') {
+    return `const { test, expect } = require('@playwright/test');`;
+  }
   return `import { test, expect } from '@playwright/test';`;
 }
 
@@ -27,14 +33,17 @@ function generateImports(): string {
 function generateTestSuite(
   suiteName: string,
   targetUrl: string,
-  scenarios: TestScenario[]
+  scenarios: TestScenario[],
+  language: CodeLanguage
 ): string {
-  const beforeEach = `  test.beforeEach(async ({ page }) => {
+  const arrow = language === 'javascript' ? 'async ({ page })' : 'async ({ page })';
+
+  const beforeEach = `  test.beforeEach(${arrow} => {
     await page.goto('${targetUrl}');
     await page.waitForLoadState('networkidle');
   });`;
 
-  const tests = scenarios.map((scenario) => generateTest(scenario)).join('\n\n');
+  const tests = scenarios.map((scenario) => generateTest(scenario, language)).join('\n\n');
 
   return `test.describe('${suiteName}', () => {
 ${beforeEach}
@@ -46,14 +55,16 @@ ${tests}
 /**
  * Generate a single test from a scenario
  */
-function generateTest(scenario: TestScenario): string {
+function generateTest(scenario: TestScenario, language: CodeLanguage): string {
   const testBody = scenario.steps.map((step) => generateStep(step)).join('\n');
 
   const viewportConfig = scenario.viewports.length > 0
     ? `\n  // Test applies to: ${scenario.viewports.join(', ')}`
     : '';
 
-  return `  test('${scenario.name}', async ({ page }) => {
+  const arrow = language === 'javascript' ? 'async ({ page })' : 'async ({ page })';
+
+  return `  test('${scenario.name}', ${arrow} => {
     // ${scenario.description}
     // Priority: ${scenario.priority} | Category: ${scenario.category}${viewportConfig}
 
@@ -67,6 +78,11 @@ ${testBody}
 function generateStep(step: TestStep): string {
   const indent = '    ';
   const comment = `// ${step.description}`;
+
+  // Check if this is a plugin action
+  if (step.pluginAction) {
+    return generatePluginStepCode(step.pluginAction, comment, indent);
+  }
 
   switch (step.action) {
     case 'navigate':
@@ -103,6 +119,20 @@ function generateStep(step: TestStep): string {
     default:
       return `${indent}${comment}\n${indent}// Unknown action: ${step.action}`;
   }
+}
+
+/**
+ * Generate code for a plugin step
+ */
+function generatePluginStepCode(pluginData: PluginStepData, comment: string, indent: string): string {
+  const plugin = getPlugin(pluginData.pluginId);
+
+  if (!plugin) {
+    return `${indent}${comment}\n${indent}// Plugin not found: ${pluginData.pluginId}`;
+  }
+
+  const generatedCode = generatePluginCode(pluginData, plugin.codeGenerator, { indent });
+  return `${indent}${comment}\n${generatedCode}`;
 }
 
 /**

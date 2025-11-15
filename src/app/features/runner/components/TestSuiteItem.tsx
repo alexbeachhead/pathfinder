@@ -34,6 +34,7 @@ export function TestSuiteItem({ suite, isSelected, onClick, theme, index }: Test
         borderStyle: 'solid',
         borderColor: isSelected ? theme.colors.primary : theme.colors.border,
       }}
+      data-testid={`test-suite-item-${suite.id}`}
     >
       {/* External Link Icon - Top Right Corner */}
       <motion.button
@@ -46,6 +47,7 @@ export function TestSuiteItem({ suite, isSelected, onClick, theme, index }: Test
           color: theme.colors.primary,
         }}
         aria-label={`Open ${suite.name} in new tab`}
+        data-testid={`test-suite-external-link-${suite.id}`}
       >
         <ExternalLink className="w-3.5 h-3.5" />
       </motion.button>

@@ -38,92 +38,33 @@ export interface IssuesByCategory {
 }
 
 /**
- * Get dashboard statistics
+ * Get dashboard statistics using server-side aggregation
  * @param daysBack Number of days to look back from offset
  * @param offset Number of days to offset the period (for trend calculation)
  */
 export async function getDashboardStats(daysBack: number = 30, offset: number = 0): Promise<DashboardStats> {
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack - offset);
+    // Call the database function for server-side aggregation
+    const { data, error } = await supabase
+      .rpc('get_dashboard_stats', {
+        days_back: daysBack,
+        offset_days: offset
+      })
+      .single();
 
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() - offset);
+    if (error) throw error;
 
-    // Get test runs in the period
-    const { data: testRuns, error: runsError } = await supabase
-      .from('test_runs')
-      .select('id, status, created_at')
-      .gte('created_at', cutoffDate.toISOString())
-      .lte('created_at', endDate.toISOString())
-      .order('created_at', { ascending: false });
-
-    if (runsError) throw runsError;
-
-    const recentTestRuns = testRuns?.length || 0;
-    const completedRuns = testRuns?.filter(r => r.status === 'completed') || [];
-
-    // Get test results for completed runs
-    const runIds = completedRuns.map(r => r.id);
-
-    let totalTests = 0;
-    let passedTests = 0;
-    let qualityScores: number[] = [];
-
-    if (runIds.length > 0) {
-      const { data: results, error: resultsError } = await supabase
-        .from('test_results')
-        .select('status, test_run_id')
-        .in('test_run_id', runIds);
-
-      if (resultsError) throw resultsError;
-
-      totalTests = results?.length || 0;
-      passedTests = results?.filter(r => r.status === 'pass').length || 0;
-
-      // Get AI analyses for quality scores
-      const { data: analyses, error: analysesError } = await supabase
-        .from('ai_analyses')
-        .select('quality_score, test_result_id')
-        .in('test_result_id', results?.map(r => r.test_run_id) || []);
-
-      if (!analysesError && analyses) {
-        qualityScores = analyses
-          .map(a => a.quality_score)
-          .filter((score): score is number => score !== null && score !== undefined);
-      }
+    if (!data) {
+      throw new Error('No data returned from get_dashboard_stats');
     }
-
-    // Get total issues
-    const { data: analyses, error: analysesError } = await supabase
-      .from('ai_analyses')
-      .select('findings')
-      .gte('created_at', cutoffDate.toISOString())
-      .lte('created_at', endDate.toISOString());
-
-    let totalIssues = 0;
-    if (!analysesError && analyses) {
-      totalIssues = analyses.reduce((sum, a) => {
-        const findings = a.findings as any[];
-        return sum + (findings?.length || 0);
-      }, 0);
-    }
-
-    const passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-    const avgQualityScore = qualityScores.length > 0
-      ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length
-      : 0;
-
-    // Calculate coverage (mock for now, would be based on test suite coverage)
-    const coverage = 85; // Placeholder
 
     return {
-      totalTests,
-      passRate: Math.round(passRate * 10) / 10,
-      totalIssues,
-      coverage,
-      recentTestRuns,
-      avgQualityScore: Math.round(avgQualityScore * 10) / 10,
+      totalTests: Number(data.total_tests) || 0,
+      passRate: Number(data.pass_rate) || 0,
+      totalIssues: Number(data.total_issues) || 0,
+      coverage: Number(data.coverage) || 0,
+      recentTestRuns: Number(data.recent_test_runs) || 0,
+      avgQualityScore: Number(data.avg_quality_score) || 0,
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -139,7 +80,7 @@ export async function getDashboardStats(daysBack: number = 30, offset: number = 
 }
 
 /**
- * Get recent test runs with pagination
+ * Get recent test runs with pagination using server-side aggregation
  */
 export async function getRecentTestRuns(
   page: number = 1,
@@ -152,79 +93,43 @@ export async function getRecentTestRuns(
   }
 ): Promise<{ runs: TestRunSummary[]; total: number }> {
   try {
-    let query = supabase
-      .from('test_runs')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
-
-    // Apply filters
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters?.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-    if (filters?.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
-
-    // Pagination
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    const { data: testRuns, error, count } = await query;
+    // Call the database function for server-side aggregation
+    const { data, error } = await supabase
+      .rpc('get_recent_test_runs', {
+        page_num: page,
+        page_size: pageSize,
+        status_filter: filters?.status || null,
+        min_quality_score: filters?.minQualityScore || null,
+        date_from: filters?.dateFrom || null,
+        date_to: filters?.dateTo || null
+      });
 
     if (error) throw error;
 
-    // Enrich with test results data
-    const enrichedRuns: TestRunSummary[] = [];
-
-    for (const run of testRuns || []) {
-      const { data: results } = await supabase
-        .from('test_results')
-        .select('id, status')
-        .eq('test_run_id', run.id);
-
-      const totalTests = results?.length || 0;
-      const passedTests = results?.filter(r => r.status === 'pass').length || 0;
-      const failedTests = results?.filter(r => r.status === 'fail').length || 0;
-
-      // Get quality score and issue count from AI analyses
-      const { data: analyses } = await supabase
-        .from('ai_analyses')
-        .select('quality_score, findings')
-        .in('test_result_id', results?.map(r => r.id) || [])
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const latestAnalysis = analyses?.[0];
-      const qualityScore = latestAnalysis?.quality_score || undefined;
-      const findings = (latestAnalysis?.findings || []) as any[];
-      const issueCount = findings.length;
-
-      // Apply quality score filter
-      if (filters?.minQualityScore && qualityScore && qualityScore < filters.minQualityScore) {
-        continue;
-      }
-
-      enrichedRuns.push({
-        id: run.id,
-        name: run.suite_name || `Test Run #${run.id.slice(0, 8)}`,
-        created_at: run.created_at,
-        status: run.status,
-        total_tests: totalTests,
-        passed_tests: passedTests,
-        failed_tests: failedTests,
-        duration_ms: run.duration_ms || 0,
-        quality_score: qualityScore,
-        issue_count: issueCount,
-      });
+    if (!data || data.length === 0) {
+      return { runs: [], total: 0 };
     }
 
+    // Transform database results to TypeScript interface
+    const runs: TestRunSummary[] = data.map((row: any) => ({
+      id: row.id,
+      name: row.suite_name,
+      created_at: row.created_at,
+      status: row.status,
+      total_tests: Number(row.total_tests),
+      passed_tests: Number(row.passed_tests),
+      failed_tests: Number(row.failed_tests),
+      duration_ms: Number(row.duration_ms),
+      quality_score: row.quality_score !== 0 ? Number(row.quality_score) : undefined,
+      issue_count: Number(row.issue_count),
+    }));
+
+    // Extract total count from first row (all rows have the same total_count)
+    const total = data.length > 0 ? Number(data[0].total_count) : 0;
+
     return {
-      runs: enrichedRuns,
-      total: count || 0,
+      runs,
+      total,
     };
   } catch (error) {
     console.error('Error fetching recent test runs:', error);
@@ -233,53 +138,29 @@ export async function getRecentTestRuns(
 }
 
 /**
- * Get quality trend data over time
+ * Get quality trend data over time using server-side aggregation
  */
 export async function getQualityTrends(daysBack: number = 30): Promise<QualityTrendPoint[]> {
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-
-    // Get test runs
-    const { data: testRuns, error: runsError } = await supabase
-      .from('test_runs')
-      .select('id, created_at, status')
-      .eq('status', 'completed')
-      .gte('created_at', cutoffDate.toISOString())
-      .order('created_at', { ascending: true });
-
-    if (runsError) throw runsError;
-
-    const trends: QualityTrendPoint[] = [];
-
-    for (const run of testRuns || []) {
-      // Get test results
-      const { data: results } = await supabase
-        .from('test_results')
-        .select('id, status')
-        .eq('test_run_id', run.id);
-
-      const totalTests = results?.length || 0;
-      const passedTests = results?.filter(r => r.status === 'pass').length || 0;
-      const passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-
-      // Get quality score from AI analyses
-      const { data: analyses } = await supabase
-        .from('ai_analyses')
-        .select('quality_score')
-        .in('test_result_id', results?.map(r => r.id) || [])
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const qualityScore = analyses?.[0]?.quality_score || 0;
-
-      trends.push({
-        date: new Date(run.created_at).toISOString().split('T')[0],
-        quality_score: qualityScore,
-        test_run_id: run.id,
-        pass_rate: passRate,
+    // Call the database function for server-side aggregation
+    const { data, error } = await supabase
+      .rpc('get_quality_trends', {
+        days_back: daysBack
       });
+
+    if (error) throw error;
+
+    if (!data) {
+      return [];
     }
+
+    // Transform database results to TypeScript interface
+    const trends: QualityTrendPoint[] = data.map((row: any) => ({
+      date: row.date,
+      test_run_id: row.test_run_id,
+      quality_score: Number(row.quality_score),
+      pass_rate: Number(row.pass_rate),
+    }));
 
     return trends;
   } catch (error) {
@@ -289,46 +170,32 @@ export async function getQualityTrends(daysBack: number = 30): Promise<QualityTr
 }
 
 /**
- * Get issues grouped by category
+ * Get issues grouped by category using server-side aggregation
  */
 export async function getIssuesByCategory(daysBack: number = 30): Promise<IssuesByCategory[]> {
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-
-    const { data: analyses, error } = await supabase
-      .from('ai_analyses')
-      .select('findings')
-      .gte('created_at', cutoffDate.toISOString());
+    // Call the database function for server-side aggregation
+    const { data, error } = await supabase
+      .rpc('get_issues_by_category', {
+        days_back: daysBack
+      });
 
     if (error) throw error;
 
-    const categoryMap = new Map<string, IssuesByCategory>();
-
-    for (const analysis of analyses || []) {
-      const findings = (analysis.findings || []) as any[];
-
-      for (const finding of findings) {
-        const category = finding.category || 'unknown';
-        const existing = categoryMap.get(category) || {
-          category,
-          count: 0,
-          critical: 0,
-          warning: 0,
-          info: 0,
-        };
-
-        existing.count++;
-
-        if (finding.severity === 'critical') existing.critical++;
-        else if (finding.severity === 'warning') existing.warning++;
-        else if (finding.severity === 'info') existing.info++;
-
-        categoryMap.set(category, existing);
-      }
+    if (!data) {
+      return [];
     }
 
-    return Array.from(categoryMap.values()).sort((a, b) => b.count - a.count);
+    // Transform database results to TypeScript interface
+    const issues: IssuesByCategory[] = data.map((row: any) => ({
+      category: row.category,
+      count: Number(row.count),
+      critical: Number(row.critical),
+      warning: Number(row.warning),
+      info: Number(row.info),
+    }));
+
+    return issues;
   } catch (error) {
     console.error('Error fetching issues by category:', error);
     return [];

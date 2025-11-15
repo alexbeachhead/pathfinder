@@ -203,3 +203,27 @@ export async function getTestRunStats(runId: string): Promise<{
 
   return stats;
 }
+
+/**
+ * Get test runs with optional suite filtering
+ * Used by RunHistoryPanel to display past runs
+ */
+export async function getTestRuns(suiteId?: string, limit: number = 50): Promise<TestRun[]> {
+  let query = supabase
+    .from('test_runs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (suiteId) {
+    query = query.eq('suite_id', suiteId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to fetch test runs: ${error.message}`);
+  }
+
+  return data || [];
+}

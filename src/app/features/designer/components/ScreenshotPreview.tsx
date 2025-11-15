@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader } from '@/components/ui/ThemedCard';
 import { ScreenshotMetadata } from '@/lib/types';
-import { X, ZoomIn, Download } from 'lucide-react';
+import { X, ZoomIn, Download, FileText } from 'lucide-react';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 
 interface ScreenshotPreviewProps {
@@ -19,14 +19,41 @@ export function ScreenshotPreview({
 }: ScreenshotPreviewProps) {
   const { currentTheme } = useTheme();
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotMetadata | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Load DOM snapshot into iframe when selected
+  useEffect(() => {
+    if (selectedScreenshot?.domSnapshot && iframeRef.current) {
+      const iframe = iframeRef.current;
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(selectedScreenshot.domSnapshot);
+        iframeDoc.close();
+      }
+    }
+  }, [selectedScreenshot]);
 
   const handleDownload = (screenshot: ScreenshotMetadata) => {
-    const link = document.createElement('a');
-    link.href = `data:image/png;base64,${screenshot.base64}`;
-    link.download = `${screenshot.viewportName.replace(/\s+/g, '-').toLowerCase()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (screenshot.previewMode === 'lightweight' && screenshot.domSnapshot) {
+      // Download HTML snapshot
+      const blob = new Blob([screenshot.domSnapshot], { type: 'text/html' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${screenshot.viewportName.replace(/\s+/g, '-').toLowerCase()}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } else {
+      // Download screenshot image
+      const link = document.createElement('a');
+      link.href = `data:image/png;base64,${screenshot.base64}`;
+      link.download = `${screenshot.viewportName.replace(/\s+/g, '-').toLowerCase()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -34,8 +61,8 @@ export function ScreenshotPreview({
       <ThemedCard variant="bordered">
         <ThemedCardHeader
           title={title}
-          subtitle={`${screenshots.length} viewport${screenshots.length !== 1 ? 's' : ''} captured`}
-          icon={<ZoomIn className="w-5 h-5" />}
+          subtitle={`${screenshots.length} viewport${screenshots.length !== 1 ? 's' : ''} captured ${screenshots[0]?.previewMode === 'lightweight' ? '(Lightweight)' : '(Full)'}`}
+          icon={screenshots[0]?.previewMode === 'lightweight' ? <FileText className="w-5 h-5" /> : <ZoomIn className="w-5 h-5" />}
         />
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -158,18 +185,36 @@ export function ScreenshotPreview({
                 </div>
               </div>
 
-              {/* Image */}
+              {/* Image or DOM Snapshot */}
               <div className="p-4">
-                <img
-                  src={`data:image/png;base64,${selectedScreenshot.base64}`}
-                  alt={selectedScreenshot.viewportName}
-                  className="w-full rounded-lg"
-                  style={{
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: currentTheme.colors.border,
-                  }}
-                />
+                {selectedScreenshot.previewMode === 'lightweight' && selectedScreenshot.domSnapshot ? (
+                  <iframe
+                    ref={iframeRef}
+                    className="w-full rounded-lg"
+                    style={{
+                      height: '600px',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: currentTheme.colors.border,
+                      backgroundColor: '#ffffff',
+                    }}
+                    sandbox="allow-same-origin"
+                    title={`Preview: ${selectedScreenshot.viewportName}`}
+                    data-testid="lightweight-preview-iframe"
+                  />
+                ) : (
+                  <img
+                    src={`data:image/png;base64,${selectedScreenshot.base64}`}
+                    alt={selectedScreenshot.viewportName}
+                    className="w-full rounded-lg"
+                    style={{
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: currentTheme.colors.border,
+                    }}
+                    data-testid="full-preview-image"
+                  />
+                )}
               </div>
             </motion.div>
           </motion.div>

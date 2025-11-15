@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { TestSuite, TestCode } from '../types';
+import { TestSuite, TestCode, CodeLanguage } from '../types';
 
 /**
  * Create a new test suite
@@ -32,7 +32,7 @@ export async function createTestSuite(data: {
 export async function saveTestCode(
   suiteId: string,
   code: string,
-  language: string = 'typescript'
+  language: CodeLanguage = 'typescript'
 ): Promise<void> {
   // Get the latest version for this suite
   const { data: latestCode } = await supabase

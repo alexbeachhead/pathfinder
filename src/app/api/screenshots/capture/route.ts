@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VIEWPORTS, PAGE_LOAD_TIMEOUT } from '@/lib/config';
-import { createContext, navigateToUrl, captureScreenshot, closeBrowser } from '@/lib/playwright/setup';
-import { ScreenshotMetadata } from '@/lib/types';
+import { createContext, navigateToUrl, captureScreenshot, captureDOMSnapshot, closeBrowser } from '@/lib/playwright/setup';
+import { ScreenshotMetadata, PreviewMode } from '@/lib/types';
 import { uploadScreenshot, ScreenshotMetadata as StorageMetadata } from '@/lib/storage/screenshots';
 
 export const dynamic = 'force-dynamic';
@@ -10,12 +10,13 @@ export const maxDuration = 60; // 60 seconds for serverless function
 interface CaptureRequest {
   url: string;
   viewports?: string[]; // viewport keys from VIEWPORTS config
+  previewMode?: PreviewMode; // 'lightweight' or 'full'
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CaptureRequest = await request.json();
-    const { url, viewports: requestedViewports } = body;
+    const { url, viewports: requestedViewports, previewMode = 'full' } = body;
 
     // Validate URL
     if (!url || !isValidUrl(url)) {
@@ -55,26 +56,44 @@ export async function POST(request: NextRequest) {
         // Wait a bit for dynamic content
         await page.waitForTimeout(1000);
 
-        // Capture screenshot
-        const screenshotBuffer = await captureScreenshot(page, { fullPage: true });
-
-        // Upload to Supabase storage
+        let base64 = '';
         let screenshotUrl = '';
-        try {
-          const metadata: StorageMetadata = {
-            testRunId: sessionId,
-            testName: 'designer-preview',
-            stepName: viewportKey,
-            viewport: viewport.name,
-            timestamp,
-          };
-          screenshotUrl = await uploadScreenshot(screenshotBuffer, metadata);
-        } catch (uploadError) {
-          console.warn('Screenshot upload failed, using base64 fallback:', uploadError);
-        }
+        let domSnapshot: string | undefined;
 
-        // Convert to base64 as fallback
-        const base64 = screenshotBuffer.toString('base64');
+        if (previewMode === 'lightweight') {
+          // Capture DOM snapshot for lightweight preview
+          domSnapshot = await captureDOMSnapshot(page);
+          // Create a minimal placeholder image for thumbnails
+          const placeholderBuffer = Buffer.from(
+            `<svg width="${viewport.width}" height="200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="100%" height="100%" fill="#1a1a2e"/>
+              <text x="50%" y="50%" text-anchor="middle" fill="#00d4ff" font-size="16" font-family="Arial">
+                Lightweight Preview (${viewport.name})
+              </text>
+            </svg>`
+          );
+          base64 = placeholderBuffer.toString('base64');
+        } else {
+          // Capture full screenshot
+          const screenshotBuffer = await captureScreenshot(page, { fullPage: true });
+
+          // Upload to Supabase storage
+          try {
+            const metadata: StorageMetadata = {
+              testRunId: sessionId,
+              testName: 'designer-preview',
+              stepName: viewportKey,
+              viewport: viewport.name,
+              timestamp,
+            };
+            screenshotUrl = await uploadScreenshot(screenshotBuffer, metadata);
+          } catch (uploadError) {
+            console.warn('Screenshot upload failed, using base64 fallback:', uploadError);
+          }
+
+          // Convert to base64 as fallback
+          base64 = screenshotBuffer.toString('base64');
+        }
 
         screenshots.push({
           viewportName: viewport.name,
@@ -83,6 +102,8 @@ export async function POST(request: NextRequest) {
           url: url,
           base64: screenshotUrl || base64, // Use URL if available, otherwise base64
           screenshotUrl: screenshotUrl || undefined,
+          previewMode,
+          domSnapshot,
         });
 
         // Cleanup
