@@ -24,12 +24,13 @@ Real-time dashboards with health metrics, pass/fail analytics, and AI-powered ro
 
 ## 🤖 Powered by Google Gemini AI
 
-Pathfinder leverages **Google Gemini API** across its entire testing lifecycle:
+Pathfinder leverages **Google Gemini API** (with Groq fallback) across its entire testing lifecycle:
 
 ### 1. **Intelligent Test Generation**
-- **Site Complexity Analysis**: Gemini analyzes your application's structure, identifying interactive elements, user flows, and edge cases
-- **Scenario Recommendations**: AI suggests comprehensive test scenarios based on real-world usage patterns
-- **Code Generation**: Converts test scenarios into production-ready Playwright code with proper assertions and error handling
+- **Site Complexity Analysis**: Gemini analyzes your application's structure via `/api/analyze/complexity`
+- **Visual Analysis**: Screenshot-based UI element detection and interaction discovery
+- **Scenario Recommendations**: AI suggests comprehensive test scenarios based on detected patterns
+- **Code Generation**: Converts test scenarios into production-ready Playwright code with proper assertions
 
 ### 2. **Natural Language Test Input**
 - **Intent Analysis**: Understands testing goals from conversational descriptions
@@ -40,11 +41,6 @@ Pathfinder leverages **Google Gemini API** across its entire testing lifecycle:
 - **Failure Diagnostics**: When tests fail, Gemini analyzes screenshots, logs, and error messages to identify root causes
 - **Actionable Recommendations**: Provides specific suggestions for fixing issues
 - **Severity Scoring**: Prioritizes issues by business impact with confidence ratings
-
-### 4. **Continuous Learning**
-- Each test run feeds data back into Gemini for improved analysis
-- Pattern recognition across test history identifies recurring issues
-- Adaptive scenario generation based on application changes
 
 ---
 
@@ -58,6 +54,17 @@ Pathfinder leverages **Google Gemini API** across its entire testing lifecycle:
 4. **Deploy**: Save test suite ready for execution
 
 **Business Impact**: Transform hours of manual test planning into minutes of AI-assisted design.
+
+---
+
+### Unified Test Builder
+**Dual-Mode Test Creation**
+- **Visual Flow Mode**: Drag-and-drop interface for building test flows
+- **Natural Language Mode**: Write tests in plain English, auto-synced to visual flow
+- **Bi-directional Sync**: Changes in either mode automatically update the other
+- **AI-Powered Recommendations**: Smart suggestions based on test context
+
+**Business Impact**: Flexibility to work in the mode that fits your workflow - visual or text-based.
 
 ---
 
@@ -85,11 +92,13 @@ Pathfinder leverages **Google Gemini API** across its entire testing lifecycle:
 
 ### Visual Regression Detection
 **Pixel-Perfect Accuracy**
-- Baseline screenshot management
-- Pixelmatch-based comparison
-- Configurable thresholds
+- Baseline screenshot management (`/api/diff/baselines`)
+- Pixelmatch-based comparison engine
+- Configurable thresholds per test suite
 - Ignore regions for dynamic content
-- Batch comparison APIs
+- Batch comparison APIs for multi-viewport testing
+- Regression tracking and review workflow
+- Visual diff highlighting
 
 **Business Impact**: Automatically catch UI breaks that manual review would miss.
 
@@ -128,12 +137,36 @@ Output: Complete Playwright test with:
 
 ---
 
+### Additional Features
+
+**Plugin Marketplace**
+- Extensible architecture for custom test plugins
+- Community-contributed test extensions
+- Easy installation and configuration
+
+**Anomaly Detection**
+- ML-based pattern recognition across test runs
+- Automatic identification of unusual failures
+- Early warning system for degrading quality
+
+**Test Queue Management**
+- Intelligent test scheduling and prioritization
+- Concurrent execution with resource management
+- Queue monitoring and control
+
+**Preview Mode**
+- Validate tests before full execution
+- Interactive test debugging
+- Step-by-step execution control
+
+---
+
 ## 🛠️ Technology Stack
 
 ### AI & Analysis
-- **Google Gemini API** - Core intelligence engine
-- **Gemini Pro Vision** - Screenshot analysis
-- **Gemini Pro** - Code generation and NL processing
+- **Google Gemini API** - Core intelligence engine (Gemini Flash)
+- **Gemini Vision** - Screenshot analysis and complexity detection
+- **Groq API** - Fallback LLM when Gemini is rate-limited or unavailable
 
 ### Testing & Automation
 - **Playwright 1.56** - Cross-browser automation
@@ -158,6 +191,7 @@ Output: Complete Playwright test with:
 - Node.js 18+ and npm
 - Supabase account (free tier works)
 - Google Gemini API key ([Get one here](https://ai.google.dev/))
+- Groq API key (optional, for fallback) ([Get one here](https://console.groq.com/))
 
 ---
 
@@ -179,6 +213,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Google Gemini API
 GEMINI_API_KEY=your_gemini_api_key
+
+# Optional: Groq API (fallback when Gemini is rate-limited)
+GROQ_API_KEY=your_groq_api_key
 ```
 
 ### 3. Database Setup
@@ -244,15 +281,20 @@ Supabase subscriptions provide live updates during test execution—watch tests 
 ## 🏆 Google Hackathon Highlights
 
 ### Gemini API Integration Points
-1. **Site Analysis Endpoint**: `/api/analyze/complexity`
-2. **NL to Playwright**: `/api/gemini/nl-to-playwright`
-3. **Intent Analysis**: `/api/gemini/analyze-intent`
-4. **Root Cause Analysis**: `/api/ai/root-cause-analysis/[resultId]`
+1. **Site Complexity Analysis**: `/api/analyze/complexity`
+2. **Page Structure Analysis**: `/api/gemini/analyze-page`
+3. **Visual Analysis**: `/api/gemini/analyze-visual`
+4. **NL to Playwright**: `/api/gemini/nl-to-playwright`
+5. **Intent Analysis**: `/api/gemini/analyze-intent`
+6. **NL to Steps / Steps to NL**: `/api/gemini/nl-to-steps`, `/api/gemini/steps-to-nl`
+7. **Root Cause Analysis**: `/api/ai/root-cause-analysis/[resultId]`, `/api/ai/analyze-root-cause`
+8. **Similar Failures Detection**: `/api/ai/similar-failures`
 
 ### Innovation Showcase
 - **Multi-modal AI**: Combines vision (screenshot analysis) with language (code generation)
 - **Autonomous Testing**: End-to-end test creation without human intervention
-- **Adaptive Intelligence**: Learns from test history to improve recommendations
+- **Intelligent Fallback**: Automatic failover to Groq when Gemini is unavailable or rate-limited
+- **Bi-directional Sync**: Seamless translation between visual flows and natural language
 - **Accessibility**: Natural language interface democratizes technical workflows
 
 ---
@@ -263,14 +305,29 @@ Supabase subscriptions provide live updates during test execution—watch tests 
 pathfinder/
 ├── src/
 │   ├── app/
-│   │   ├── features/          # Feature modules (dashboard, designer, runner, reports)
-│   │   ├── api/               # Next.js API routes (Gemini, Playwright, diff)
+│   │   ├── features/          # Feature modules
+│   │   │   ├── dashboard/    # Main dashboard with health metrics
+│   │   │   ├── designer/     # Visual test designer (4-step workflow)
+│   │   │   ├── test-builder/ # Unified test builder (NL + Visual Flow modes)
+│   │   │   ├── flow-builder/ # Visual flow interface
+│   │   │   ├── runner/       # Test execution interface
+│   │   │   ├── reports/      # Test results and analytics
+│   │   │   ├── diff/         # Visual regression comparison UI
+│   │   │   └── nl-test/      # Natural language test input
+│   │   ├── api/               # Next.js API routes
+│   │   │   ├── gemini/       # Gemini AI endpoints
+│   │   │   ├── ai/           # Root cause analysis, embeddings
+│   │   │   ├── playwright/   # Test execution
+│   │   │   ├── diff/         # Visual regression APIs
+│   │   │   └── analyze/      # Site complexity analysis
 │   │   └── page.tsx           # SPA router
 │   ├── components/            # Reusable UI components
 │   ├── lib/
 │   │   ├── stores/            # Zustand state management
-│   │   ├── supabase/          # Database operations
-│   │   ├── gemini.ts          # Gemini AI client
+│   │   ├── supabase.ts        # Supabase client
+│   │   ├── ai-client.ts       # Unified AI client (Gemini + Groq fallback)
+│   │   ├── gemini.ts          # Gemini-specific utilities
+│   │   ├── groq.ts            # Groq fallback client
 │   │   └── playwright/        # Test execution utilities
 │   └── hooks/                 # Custom React hooks
 ├── supabase/
@@ -292,22 +349,35 @@ pathfinder/
 
 ## 🚧 Roadmap
 
-- [ ] CI/CD pipeline integration (GitHub Actions, GitLab CI)
+### Completed ✅
+- [x] Visual regression detection with baseline management
+- [x] Root cause analysis with AI-powered diagnostics
+- [x] Unified test builder with dual-mode interface
+- [x] Groq fallback for resilient AI operations
+- [x] GitHub deployment integration (`/api/ci/deploy-github`)
+- [x] Plugin marketplace for extensibility
+- [x] Anomaly detection across test runs
+- [x] Test queue management system
+- [x] Preview mode for test validation
+
+### In Progress / Planned
 - [ ] Slack/Discord notifications for test failures
 - [ ] Multi-user collaboration with role-based access
 - [ ] Test scheduling and cron jobs
 - [ ] API testing support (REST, GraphQL)
 - [ ] Performance testing metrics (Lighthouse integration)
-- [ ] Advanced Gemini fine-tuning for domain-specific testing
+- [ ] Mobile app testing (React Native, Flutter)
+- [ ] Advanced reporting with custom metrics
 
 ---
 
 ## 📄 Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide
-- **[THEME_SYSTEM.md](./THEME_SYSTEM.md)** - Theme customization
-- **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** - Database configuration
-- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Feature details
+- **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide and project overview
+- **[PLUGIN_SYSTEM.md](./PLUGIN_SYSTEM.md)** - Plugin architecture and marketplace
+- **[ANOMALY_DETECTION.md](./ANOMALY_DETECTION.md)** - Anomaly detection system details
+- **[QUEUE_SYSTEM_GUIDE.md](./QUEUE_SYSTEM_GUIDE.md)** - Test queue management
+- **[PREVIEW_MODE_IMPLEMENTATION.md](./PREVIEW_MODE_IMPLEMENTATION.md)** - Preview mode feature guide
 
 ---
 
