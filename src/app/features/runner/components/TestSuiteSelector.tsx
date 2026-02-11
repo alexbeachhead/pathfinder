@@ -21,7 +21,7 @@ interface SuiteWithScenarioCount extends TestSuite {
 
 export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSelectorProps) {
   const { currentTheme } = useTheme();
-  const { deleteTestSuite } = useSupabase();
+  const { deleteTestSuite, updateTestSuite } = useSupabase();
   const [suites, setSuites] = useState<SuiteWithScenarioCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,12 +30,11 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
     loadTestSuites();
   }, []);
 
-  const loadTestSuites = async () => {
+  const loadTestSuites = async (): Promise<SuiteWithScenarioCount[]> => {
     try {
       setLoading(true);
       const data = await getTestSuites();
 
-      // Load scenario counts for each suite
       const suitesWithCounts = await Promise.all(
         data.map(async (suite) => {
           const scenarios = await getTestScenarios(suite.id);
@@ -47,8 +46,9 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
       );
 
       setSuites(suitesWithCounts);
+      return suitesWithCounts;
     } catch (error) {
-      // Failed to load test suites - silently fail
+      return [];
     } finally {
       setLoading(false);
     }
@@ -65,6 +65,16 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
       onSelectSuite(null);
     }
     await loadTestSuites();
+  };
+
+  const handleSuiteUpdate = async (suiteId: string, updates: { name?: string }) => {
+    if (!updates.name?.trim()) return;
+    await updateTestSuite(suiteId, { name: updates.name.trim() });
+    const next = await loadTestSuites();
+    if (selectedSuite?.id === suiteId) {
+      const updated = next.find((s) => s.id === suiteId);
+      if (updated) onSelectSuite(updated);
+    }
   };
 
   return (
@@ -116,6 +126,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
                 isSelected={selectedSuite?.id === suite.id}
                 onClick={() => onSelectSuite(selectedSuite?.id === suite.id ? null : suite)}
                 onDelete={handleDeleteSuite}
+                onSuiteUpdate={handleSuiteUpdate}
                 theme={currentTheme}
                 index={index}
               />

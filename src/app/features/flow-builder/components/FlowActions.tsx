@@ -52,14 +52,16 @@ export function FlowActions({
 
     try {
       const dbSteps = convertFlowStepsForDB(flow.steps);
+      const targetUrl = flow.targetUrl?.trim() || undefined;
 
       if (currentScenarioId) {
-        // Update existing scenario
+        // Update existing scenario (each scenario has its own target URL)
         await updateFlowScenario(
           currentScenarioId,
           flow.name,
           flow.description,
-          dbSteps
+          dbSteps,
+          targetUrl
         );
         alert('Flow updated successfully!');
       } else {
@@ -68,7 +70,8 @@ export function FlowActions({
           selectedSuiteId,
           flow.name,
           flow.description,
-          dbSteps
+          dbSteps,
+          targetUrl
         );
         onScenarioIdChange(newScenarioId);
         alert('Flow saved successfully!');

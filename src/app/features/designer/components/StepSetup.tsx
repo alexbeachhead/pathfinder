@@ -4,81 +4,63 @@ import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { ThemedSwitch, SwitchOption } from '@/components/ui/ThemedSwitch';
-import { Wand2, Code, Zap, Camera } from 'lucide-react';
-import { MascotConfig, CodeLanguage, PreviewMode } from '@/lib/types';
-import { MascotCustomizer } from '../sub_Mascot/MascotCustomizer';
+import { Wand2, FilePlus } from 'lucide-react';
 import { getInputStyle, getLabelStyle, getErrorStyle } from '../lib/formHelpers';
 
+export type SetupFlow = 'ai' | 'manual';
+
+const flowOptions: SwitchOption<SetupFlow>[] = [
+  { value: 'ai', label: 'AI', description: 'Analyze page & generate scenarios', icon: <Wand2 className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', description: 'Define scenarios yourself, no AI', icon: <FilePlus className="w-4 h-4" /> },
+];
+
 interface StepSetupProps {
+  setupFlow: SetupFlow;
+  setSetupFlow: (flow: SetupFlow) => void;
   testSuiteName: string;
   setTestSuiteName: (value: string) => void;
   targetUrl: string;
   setTargetUrl: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
-  mascotConfig: MascotConfig;
-  setMascotConfig: (config: MascotConfig) => void;
-  codeLanguage: CodeLanguage;
-  setCodeLanguage: (language: CodeLanguage) => void;
-  previewMode: PreviewMode;
-  setPreviewMode: (mode: PreviewMode) => void;
+  manualScenarioNames?: string;
+  setManualScenarioNames?: (value: string) => void;
   errors: Record<string, string>;
   onStartAnalysis: () => void;
+  onAddManually?: () => void;
 }
 
-// Code language options
-const codeLanguageOptions: SwitchOption<CodeLanguage>[] = [
-  {
-    value: 'typescript',
-    label: 'TypeScript',
-    description: 'Type-safe with IDE support',
-  },
-  {
-    value: 'javascript',
-    label: 'JavaScript',
-    description: 'Simple and widely compatible',
-  },
-];
-
-// Preview mode options
-const previewModeOptions: SwitchOption<PreviewMode>[] = [
-  {
-    value: 'lightweight',
-    label: 'Lightweight',
-    description: 'Fast loading, lower memory',
-    icon: <Zap className="w-4 h-4" />,
-  },
-  {
-    value: 'full',
-    label: 'Full Rendering',
-    description: 'Accurate visuals, high fidelity',
-    icon: <Camera className="w-4 h-4" />,
-  },
-];
-
 export function StepSetup({
+  setupFlow,
+  setSetupFlow,
   testSuiteName,
   setTestSuiteName,
   targetUrl,
   setTargetUrl,
   description,
   setDescription,
-  mascotConfig,
-  setMascotConfig,
-  codeLanguage,
-  setCodeLanguage,
-  previewMode,
-  setPreviewMode,
+  manualScenarioNames = '',
+  setManualScenarioNames,
   errors,
   onStartAnalysis,
+  onAddManually,
 }: StepSetupProps) {
   const { currentTheme } = useTheme();
+  const isManual = setupFlow === 'manual';
 
   return (
     <ThemedCard variant="glow">
       <ThemedCardHeader title="Test Suite Setup" subtitle="Configure your test suite" icon={<Wand2 className="w-5 h-5" />} />
       <ThemedCardContent>
         <div className="space-y-6 mt-4">
+          <ThemedSwitch
+            options={flowOptions}
+            value={setupFlow}
+            onChange={setSetupFlow}
+            label="Flow"
+            testIdPrefix="setup-flow"
+          />
+
           <div>
             <label className="block text-sm font-medium mb-2" style={getLabelStyle(currentTheme)}>
               Test Suite Name *
@@ -124,47 +106,36 @@ export function StepSetup({
             />
           </div>
 
-          {/* Code Language Selection */}
-          <ThemedSwitch
-            options={codeLanguageOptions}
-            value={codeLanguage}
-            onChange={setCodeLanguage}
-            label="Generated Code Format"
-            icon={<Code className="w-4 h-4" />}
-            testIdPrefix="language"
-          />
+          {isManual && onAddManually && setManualScenarioNames && (
+            <div>
+              <label className="block text-sm font-medium mb-2" style={getLabelStyle(currentTheme)}>
+                Scenario names
+              </label>
+              <textarea
+                value={manualScenarioNames}
+                onChange={(e) => setManualScenarioNames(e.target.value)}
+                placeholder="One per line or comma-separated, e.g. Login flow, Checkout, Homepage"
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg transition-colors resize-none"
+                style={getInputStyle(currentTheme)}
+                data-testid="manual-scenario-names-input"
+              />
+            </div>
+          )}
 
-          {/* Preview Mode Selection */}
-          <ThemedSwitch
-            options={previewModeOptions}
-            value={previewMode}
-            onChange={setPreviewMode}
-            label="Preview Rendering Mode"
-            icon={<Camera className="w-4 h-4" />}
-            helpText={(mode) =>
-              mode === 'lightweight'
-                ? 'Lightweight mode uses DOM snapshots for quick previews with minimal resource usage.'
-                : 'Full rendering mode captures actual screenshots for precise visual feedback.'
-            }
-            testIdPrefix="preview-mode"
-          />
-
-          {/* Mascot Customization */}
-          <div
-            className="p-4 rounded-lg"
-            style={{
-              backgroundColor: `${currentTheme.colors.surface}40`,
-              borderWidth: '1px',
-              borderStyle: 'solid',
-              borderColor: currentTheme.colors.border,
-            }}
-          >
-            <MascotCustomizer config={mascotConfig} onChange={setMascotConfig} />
+          <div className="flex flex-col gap-3">
+            {isManual ? (
+              onAddManually && (
+                <ThemedButton variant="glow" size="lg" fullWidth onClick={onAddManually} leftIcon={<FilePlus className="w-5 h-5" />} data-testid="add-manually-btn">
+                  Add manually (no AI)
+                </ThemedButton>
+              )
+            ) : (
+              <ThemedButton variant="glow" size="lg" fullWidth onClick={onStartAnalysis} leftIcon={<Wand2 className="w-5 h-5" />} data-testid="start-analysis-btn">
+                Analyze & Generate Tests
+              </ThemedButton>
+            )}
           </div>
-
-          <ThemedButton variant="glow" size="lg" fullWidth onClick={onStartAnalysis} leftIcon={<Wand2 className="w-5 h-5" />} data-testid="start-analysis-btn">
-            Analyze & Generate Tests
-          </ThemedButton>
         </div>
       </ThemedCardContent>
     </ThemedCard>

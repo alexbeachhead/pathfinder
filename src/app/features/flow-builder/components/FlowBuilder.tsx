@@ -65,6 +65,15 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
     setCurrentScenarioId(null);
   }, [selectedSuiteId]);
 
+  // When a suite is selected, fill flow target URL from the suite
+  useEffect(() => {
+    if (!selectedSuiteId || !testSuites.length) return;
+    const suite = testSuites.find((s) => s.id === selectedSuiteId);
+    if (suite?.target_url) {
+      flowBuilder.updateMetadata({ targetUrl: suite.target_url });
+    }
+  }, [selectedSuiteId, testSuites]);
+
   const loadSuites = async () => {
     try {
       setIsLoadingSuites(true);
@@ -162,10 +171,14 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
       // Clear existing flow
       flowBuilder.clearFlow();
 
-      // Update metadata
+      // Each scenario has its own target URL; fallback to suite when not set
+      const scenarioTargetUrl = scenario.targetUrl ?? scenario.target_url ?? '';
+      const suiteTargetUrl = testSuites.find((s) => s.id === selectedSuiteId)?.target_url ?? '';
+
       flowBuilder.updateMetadata({
         name: scenario.name,
         description: scenario.description || '',
+        targetUrl: scenarioTargetUrl || suiteTargetUrl,
       });
 
       // Add steps
@@ -179,6 +192,15 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
           timeout: step.timeout,
           expectedResult: step.expectedResult,
         });
+      });
+    } else if (scenario && selectedSuiteId) {
+      // Scenario with no steps: set name, description, and target URL (scenario's own or suite fallback)
+      const scenarioTargetUrl = scenario.targetUrl ?? scenario.target_url ?? '';
+      const suiteTargetUrl = testSuites.find((s) => s.id === selectedSuiteId)?.target_url ?? '';
+      flowBuilder.updateMetadata({
+        name: scenario.name ?? flowBuilder.flow.name,
+        description: scenario.description ?? flowBuilder.flow.description ?? '',
+        targetUrl: scenarioTargetUrl || suiteTargetUrl || flowBuilder.flow.targetUrl || '',
       });
     }
   };

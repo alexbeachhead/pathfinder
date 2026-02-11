@@ -24,12 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!screenshots || screenshots.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one screenshot is required' },
-        { status: 400 }
-      );
-    }
+    const screenshotList = screenshots && screenshots.length > 0 ? screenshots : [];
 
     // Check for Gemini API key
     if (!process.env.GEMINI_API_KEY) {
@@ -39,9 +34,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Perform AI analysis
+    // Perform AI analysis (works with or without screenshots)
     const scenarios = await analyzePageForTests(
-      screenshots,
+      screenshotList,
       codeAnalysis,
       url
     );
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
       scenarios,
       meta: {
         url,
-        screenshotCount: screenshots.length,
+        screenshotCount: screenshotList.length,
         scenarioCount: scenarios.length,
       },
     });

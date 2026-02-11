@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, FileText, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Trash2, Pencil } from 'lucide-react';
 import { TestSuite } from '@/lib/types';
 import { Theme } from '@/lib/theme';
 
@@ -11,12 +11,24 @@ interface TestSuiteItemProps {
   isSelected: boolean;
   onClick: () => void;
   onDelete?: (suiteId: string) => void | Promise<void>;
+  onSuiteUpdate?: (suiteId: string, updates: { name: string }) => void | Promise<void>;
   theme: Theme;
   index: number;
 }
 
-export function TestSuiteItem({ suite, isSelected, onClick, onDelete, theme, index }: TestSuiteItemProps) {
+export function TestSuiteItem({ suite, isSelected, onClick, onDelete, onSuiteUpdate, theme, index }: TestSuiteItemProps) {
   const [deleting, setDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(suite.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditName(suite.name);
+  }, [suite.name]);
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.focus();
+  }, [isEditing]);
 
   const handleExternalLinkClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the item selection
@@ -32,6 +44,28 @@ export function TestSuiteItem({ suite, isSelected, onClick, onDelete, theme, ind
       await onDelete(suite.id);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onSuiteUpdate) return;
+    setEditName(suite.name);
+    setIsEditing(true);
+  };
+
+  const handleCommitEdit = async () => {
+    setIsEditing(false);
+    if (!onSuiteUpdate || !editName.trim() || editName.trim() === suite.name) return;
+    await onSuiteUpdate(suite.id, { name: editName.trim() });
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') handleCommitEdit();
+    if (e.key === 'Escape') {
+      setEditName(suite.name);
+      setIsEditing(false);
     }
   };
 
@@ -88,13 +122,50 @@ export function TestSuiteItem({ suite, isSelected, onClick, onDelete, theme, ind
       </div>
 
       {/* Suite Name and Selection Indicator */}
-      <div className="flex items-start justify-between mb-2 pr-8">
-        <h4 className="font-medium text-sm" style={{ color: theme.colors.text.primary }}>
-          {suite.name}
-        </h4>
-        {isSelected && (
+      <div className="flex items-start justify-between mb-2 pr-8 gap-2">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={handleCommitEdit}
+              onKeyDown={handleNameKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-sm flex-1 min-w-0 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-offset-0"
+              style={{
+                color: theme.colors.text.primary,
+                backgroundColor: theme.colors.surface,
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                borderColor: theme.colors.border,
+              }}
+              data-testid={`test-suite-name-input-${suite.id}`}
+            />
+          ) : (
+            <h4 className="font-medium text-sm truncate" style={{ color: theme.colors.text.primary }}>
+              {suite.name}
+            </h4>
+          )}
+          {onSuiteUpdate && !isEditing && (
+            <motion.button
+              type="button"
+              onClick={handleStartEdit}
+              className="p-1 rounded shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+              style={{ color: theme.colors.text.secondary }}
+              aria-label="Edit suite name"
+              data-testid={`test-suite-edit-${suite.id}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </motion.button>
+          )}
+        </div>
+        {isSelected && !isEditing && (
           <div
-            className="w-2 h-2 rounded-full"
+            className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: theme.colors.primary }}
           />
         )}

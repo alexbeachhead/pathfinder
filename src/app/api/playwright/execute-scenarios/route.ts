@@ -4,7 +4,6 @@ import { createTestRun, updateTestRunStatus } from '@/lib/supabase/testRuns';
 import { getTestSuite } from '@/lib/supabase/testSuites';
 import { getTestScenarios } from '@/lib/supabase/suiteAssets';
 import { saveScenarioResult } from '@/lib/supabase/scenarioResults';
-import { uploadScreenshot, ScreenshotMetadata } from '@/lib/storage/screenshots';
 import { analyzeScreenshots } from '@/lib/gemini/visualInspector';
 import { saveAIAnalysis } from '@/lib/supabase/aiAnalyses';
 import type { ConsoleLog, ErrorObject } from '@/lib/types';
@@ -111,12 +110,13 @@ export async function POST(request: NextRequest) {
                 timestamp: new Date().toISOString(),
               });
 
+              const scenarioTargetUrl = scenario.target_url ?? scenario.targetUrl;
               const result = await executeScenario({
                 scenario,
                 viewport,
                 testRunId,
                 suiteName: suite.name,
-                targetUrl: suite.target_url,
+                targetUrl: scenarioTargetUrl || suite.target_url,
                 screenshotOnEveryStep,
               });
 
@@ -151,19 +151,23 @@ export async function POST(request: NextRequest) {
               }
 
               // Run AI visual analysis on screenshots - only if scenario result was saved
-              if (scenarioResultId && result.screenshots && result.screenshots.length > 0) {
+              const validScreenshotUrls = (result.screenshots || []).filter(
+                (url): url is string => typeof url === 'string' && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://'))
+              );
+              if (scenarioResultId && validScreenshotUrls.length > 0) {
                 try {
                   console.log(`Running AI analysis for scenario: ${scenario.name} (${result.viewport})`);
 
                   // Analyze each screenshot separately (since we use scenario_results system)
-                  for (const screenshotUrl of result.screenshots) {
+                  for (const screenshotUrl of validScreenshotUrls) {
                     try {
+                      const analysisTargetUrl = scenario.target_url ?? scenario.targetUrl ?? suite.target_url;
                       const findings = await analyzeScreenshots(
                         [screenshotUrl],
                         {
                           testName: scenario.name,
                           viewport: result.viewport,
-                          targetUrl: suite.target_url,
+                          targetUrl: analysisTargetUrl,
                           testStatus: result.status,
                         },
                         'comprehensive'
@@ -410,18 +414,6 @@ async function executeScenario(options: {
     });
     await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 30000 });
 
-    // Capture initial screenshot
-    const initialScreenshot = await page.screenshot({ fullPage: true, type: 'png' });
-    const initialMetadata: ScreenshotMetadata = {
-      testRunId,
-      testName: `${scenario.name} - Initial`,
-      stepName: 'initial-load',
-      viewport: getViewportName(viewport),
-      timestamp: Date.now(),
-    };
-    const initialUrl = await uploadScreenshot(initialScreenshot, initialMetadata);
-    screenshots.push(initialUrl);
-
     // Execute scenario steps
     const steps = scenario.steps || [];
     for (let i = 0; i < steps.length; i++) {
@@ -447,19 +439,6 @@ async function executeScenario(options: {
           message: `Step completed successfully`,
         });
 
-        // Screenshot after each step if enabled
-        if (screenshotOnEveryStep) {
-          const stepScreenshot = await page.screenshot({ fullPage: true, type: 'png' });
-          const stepMetadata: ScreenshotMetadata = {
-            testRunId,
-            testName: `${scenario.name} - Step ${i + 1}`,
-            stepName: `step-${i + 1}-${step.type}`,
-            viewport: getViewportName(viewport),
-            timestamp: Date.now(),
-          };
-          const stepUrl = await uploadScreenshot(stepScreenshot, stepMetadata);
-          screenshots.push(stepUrl);
-        }
       } catch (stepError: any) {
         const stepType = step.type || step.action;
 
@@ -483,37 +462,9 @@ async function executeScenario(options: {
           stack: stepError.stack,
         });
 
-        // Capture error screenshot
-        try {
-          const errorScreenshot = await page.screenshot({ fullPage: true, type: 'png' });
-          const errorMetadata: ScreenshotMetadata = {
-            testRunId,
-            testName: `${scenario.name} - Error`,
-            stepName: `error-step-${i + 1}`,
-            viewport: getViewportName(viewport),
-            timestamp: Date.now(),
-          };
-          const errorUrl = await uploadScreenshot(errorScreenshot, errorMetadata);
-          screenshots.push(errorUrl);
-        } catch (screenshotError) {
-          console.error('Failed to capture error screenshot:', screenshotError);
-        }
-
         // Don't break - continue with remaining steps for comprehensive testing
       }
     }
-
-    // Capture final screenshot
-    const finalScreenshot = await page.screenshot({ fullPage: true, type: 'png' });
-    const finalMetadata: ScreenshotMetadata = {
-      testRunId,
-      testName: `${scenario.name} - Final`,
-      stepName: 'final-state',
-      viewport: getViewportName(viewport),
-      timestamp: Date.now(),
-    };
-    const finalUrl = await uploadScreenshot(finalScreenshot, finalMetadata);
-    screenshots.push(finalUrl);
 
     const duration = Date.now() - startTime;
     const hasFailed = errors.length > 0 || stepResults.some(sr => sr.status === 'fail');

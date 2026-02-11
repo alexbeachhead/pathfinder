@@ -11,10 +11,12 @@ export async function analyzePageForTests(
   url: string
 ): Promise<TestScenario[]> {
   const prompt = buildAnalysisPrompt(url, screenshots, codeAnalysis);
-  const imageParts = screenshots.map((screenshot) => ({
-    data: screenshot.base64 || '',
-    mimeType: 'image/png',
-  }));
+  const imageParts = screenshots
+    .filter((s) => s.base64 && s.base64.length > 0)
+    .map((screenshot) => ({
+      data: screenshot.base64!,
+      mimeType: 'image/png',
+    }));
 
   try {
     const { text, provider } = await generateCompletionWithImages(prompt, imageParts);
@@ -73,9 +75,10 @@ function buildAnalysisPrompt(
   screenshots: ScreenshotMetadata[],
   codeAnalysis: CodebaseAnalysis | null
 ): string {
-  const viewportInfo = screenshots
-    .map((s) => `${s.viewportName} (${s.width}x${s.height})`)
-    .join(', ');
+  const viewportInfo =
+    screenshots.length > 0
+      ? screenshots.map((s) => `${s.viewportName} (${s.width}x${s.height})`).join(', ')
+      : 'None (URL-only analysis)';
 
   const codeInfo = codeAnalysis
     ? `
@@ -91,11 +94,11 @@ Code analysis reveals:
 
 Context:
 - Target URL: ${url}
-- Available screenshots: ${screenshots.length} viewports (${viewportInfo})
+- Screenshots: ${screenshots.length} viewport(s) — ${viewportInfo}
 ${codeInfo}
 
 Your task:
-Analyze the screenshots and generate 3-5 COMPLETE Playwright test scenarios covering:
+${screenshots.length > 0 ? 'Analyze the screenshots and ' : ''}Generate 3-5 COMPLETE Playwright test scenarios covering:
 - Critical user flows (navigation, forms, key interactions)
 - Important edge cases (validation, errors)
 - Visual checkpoints

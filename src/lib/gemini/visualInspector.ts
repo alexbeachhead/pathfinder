@@ -158,26 +158,45 @@ Return ONLY valid JSON array of responsive issues found.
 IMPORTANT: Return ONLY the JSON array, no additional text or markdown formatting.`;
 }
 
+function isValidScreenshotInput(screenshot: string | { url: string } | { base64: string }): boolean {
+  if (typeof screenshot === 'string') {
+    return screenshot.length > 0 && (screenshot.startsWith('http://') || screenshot.startsWith('https://'));
+  }
+  if ('url' in screenshot) {
+    const u = screenshot.url;
+    return typeof u === 'string' && u.length > 0 && (u.startsWith('http://') || u.startsWith('https://'));
+  }
+  return typeof (screenshot as { base64: string }).base64 === 'string' && (screenshot as { base64: string }).base64.length > 0;
+}
+
 /**
- * Convert screenshot URL or base64 to Gemini image part
+ * Convert screenshot URL or base64 to Gemini image part. Returns null for empty/invalid URL (e.g. when storage bucket is missing).
  */
-async function screenshotToImagePart(screenshot: string | { url: string } | { base64: string }): Promise<any> {
+async function screenshotToImagePart(screenshot: string | { url: string } | { base64: string }): Promise<{ inlineData: { data: string; mimeType: string } } | null> {
+  if (!isValidScreenshotInput(screenshot)) {
+    return null;
+  }
+
   let base64Data: string;
 
   if (typeof screenshot === 'string') {
-    // Assume it's a URL
     try {
       const response = await fetch(screenshot);
       const buffer = await response.arrayBuffer();
       base64Data = Buffer.from(buffer).toString('base64');
     } catch (error) {
       console.error('Failed to fetch screenshot:', error);
-      throw error;
+      return null;
     }
   } else if ('url' in screenshot) {
-    const response = await fetch(screenshot.url);
-    const buffer = await response.arrayBuffer();
-    base64Data = Buffer.from(buffer).toString('base64');
+    try {
+      const response = await fetch(screenshot.url);
+      const buffer = await response.arrayBuffer();
+      base64Data = Buffer.from(buffer).toString('base64');
+    } catch (error) {
+      console.error('Failed to fetch screenshot:', error);
+      return null;
+    }
   } else {
     base64Data = screenshot.base64;
   }
@@ -246,10 +265,14 @@ export async function analyzeScreenshots(
   });
 
   try {
-    // Convert screenshots to image parts
-    const imageParts = await Promise.all(
+    // Convert screenshots to image parts (skip empty/invalid URLs, e.g. when storage bucket is missing)
+    const imageParts = (await Promise.all(
       screenshots.map(screenshot => screenshotToImagePart(screenshot))
-    );
+    )).filter((p): p is NonNullable<typeof p> => p != null);
+
+    if (imageParts.length === 0) {
+      return [];
+    }
 
     // Select appropriate prompt
     const prompt = analysisType === 'accessibility'

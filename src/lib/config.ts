@@ -20,7 +20,3 @@ export const API_CONFIG = {
   maxRetries: 3,
   retryDelay: 1000,
 };
-
-export const STORAGE_CONFIG = {
-  screenshotBucket: 'test-screenshots', // Change to 'test-screenshot' if your bucket uses singular form
-};

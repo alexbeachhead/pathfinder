@@ -27,9 +27,16 @@ export function FlowCanvas({
     e.preventDefault();
     setDragOverIndex(null);
 
+    const itemData = e.dataTransfer.getData('application/json');
+    if (!itemData) return;
+
     try {
-      const itemData = e.dataTransfer.getData('application/json');
-      const item: PaletteItem = JSON.parse(itemData);
+      const parsed = JSON.parse(itemData);
+      if (parsed?.type === 'flow-step' && typeof parsed.stepId === 'string') {
+        onReorderStep(parsed.stepId, index);
+        return;
+      }
+      const item: PaletteItem = parsed;
       onAddStep(item, index);
     } catch (error) {
       // Failed to parse dropped item - silently ignore

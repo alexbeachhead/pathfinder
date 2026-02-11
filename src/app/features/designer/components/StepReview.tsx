@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import { ThemedButton } from '@/components/ui/ThemedButton';
 import { TestCodeEditor } from './TestCodeEditor';
-import { ScreenshotPreview } from './ScreenshotPreview';
 import { ScenarioPreview } from './ScenarioPreview';
-import { ScreenshotMetadata, TestScenario, CodeLanguage, MascotConfig } from '@/lib/types';
+import { ScreenshotMetadata, TestScenario, CodeLanguage } from '@/lib/types';
 import { createTestSuite, saveTestCode } from '@/lib/supabase/testSuites';
 import { getOrCreateDefaultBranch, createSnapshot } from '@/lib/supabase/branches';
-import { saveSuiteScreenshots, saveTestScenarios } from '@/lib/supabase/suiteAssets';
+import { saveTestScenarios } from '@/lib/supabase/suiteAssets';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
-import { Code, PlusIcon, Image, FileText } from 'lucide-react';
+import { Code, PlusIcon, FileText } from 'lucide-react';
 
 interface StepReviewProps {
   screenshots: ScreenshotMetadata[];
@@ -21,23 +20,14 @@ interface StepReviewProps {
   targetUrl?: string;
   testSuiteName: string;
   description: string;
-  mascotConfig: MascotConfig;
   onCodeChange: (code: string) => void;
+  onScenariosChange?: (scenarios: TestScenario[]) => void;
+  onSuiteNameChange?: (name: string) => void;
+  onDescriptionChange?: (description: string) => void;
   onSaveComplete: (suiteId: string, branchId: string) => void;
   onSaveError: (error: string) => void;
   onReset: () => void;
   onReloadSuites: () => void;
-}
-
-// Helper function to save screenshots
-async function saveScreenshotsIfAvailable(suiteId: string, screenshots: ScreenshotMetadata[]) {
-  if (screenshots && screenshots.length > 0) {
-    try {
-      await saveSuiteScreenshots(suiteId, screenshots);
-    } catch (error) {
-      // Don't fail the entire save if screenshots fail
-    }
-  }
 }
 
 // Helper function to save scenarios
@@ -84,16 +74,19 @@ export function StepReview({
   targetUrl = '',
   testSuiteName,
   description,
-  mascotConfig,
   onCodeChange,
+  onScenariosChange,
+  onSuiteNameChange,
+  onDescriptionChange,
   onSaveComplete,
   onSaveError,
   onReset,
   onReloadSuites,
 }: StepReviewProps) {
   const { currentTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'screenshots' | 'scenarios' | 'code'>('screenshots');
+  const [activeTab, setActiveTab] = useState<'scenarios' | 'code'>('scenarios');
   const [isSaving, setIsSaving] = useState(false);
+  const canEditSuite = onSuiteNameChange != null || onDescriptionChange != null;
 
   const handleSaveTests = async () => {
     try {
@@ -112,8 +105,6 @@ export function StepReview({
       // Save test code with language preference
       await saveTestCode(suiteId, generatedCode, codeLanguage);
 
-      // Save screenshots and scenarios
-      await saveScreenshotsIfAvailable(suiteId, screenshots);
       await saveScenariosIfAvailable(suiteId, scenarios);
 
       // Create snapshot for the branch
@@ -133,30 +124,65 @@ export function StepReview({
 
   return (
     <div className="space-y-6">
+      {/* Editable suite name and description */}
+      {canEditSuite && (
+        <div
+          className="p-4 rounded-lg space-y-3"
+          style={{
+            backgroundColor: currentTheme.colors.surface,
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: currentTheme.colors.border,
+          }}
+        >
+          {onSuiteNameChange && (
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: currentTheme.colors.text.tertiary }}>
+                Suite name
+              </label>
+              <input
+                type="text"
+                value={testSuiteName}
+                onChange={(e) => onSuiteNameChange(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm"
+                style={{
+                  color: currentTheme.colors.text.primary,
+                  backgroundColor: currentTheme.colors.background,
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: currentTheme.colors.border,
+                }}
+                data-testid="review-suite-name-input"
+              />
+            </div>
+          )}
+          {onDescriptionChange && (
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: currentTheme.colors.text.tertiary }}>
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => onDescriptionChange(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 rounded text-sm resize-none"
+                style={{
+                  color: currentTheme.colors.text.primary,
+                  backgroundColor: currentTheme.colors.background,
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: currentTheme.colors.border,
+                }}
+                data-testid="review-description-input"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab Switcher */}
       <div className="flex items-center gap-2 border-b" style={{ borderColor: currentTheme.colors.border }}>
-        {screenshots.length > 0 && (
-          <button
-            onClick={() => setActiveTab('screenshots')}
-            className="flex items-center gap-2 px-4 py-3 font-medium text-sm transition-all relative"
-            style={{
-              color: activeTab === 'screenshots' ? currentTheme.colors.accent : currentTheme.colors.text.secondary,
-            }}
-            data-testid="screenshots-tab-btn"
-          >
-            <Image size={16} />
-            Screenshots
-            {activeTab === 'screenshots' && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5"
-                style={{ background: currentTheme.colors.accent }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              />
-            )}
-          </button>
-        )}
-        {scenarios && scenarios.length > 0 && (
+        {(onScenariosChange != null || (scenarios && scenarios.length > 0)) && (
           <button
             onClick={() => setActiveTab('scenarios')}
             className="flex items-center gap-2 px-4 py-3 font-medium text-sm transition-all relative"
@@ -209,11 +235,8 @@ export function StepReview({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        {activeTab === 'screenshots' && screenshots.length > 0 && (
-          <ScreenshotPreview screenshots={screenshots} />
-        )}
-        {activeTab === 'scenarios' && scenarios && scenarios.length > 0 && (
-          <ScenarioPreview scenarios={scenarios} />
+        {activeTab === 'scenarios' && (
+          <ScenarioPreview scenarios={scenarios} onScenariosChange={onScenariosChange} />
         )}
         {activeTab === 'code' && generatedCode && (
           <TestCodeEditor code={generatedCode} language={codeLanguage} onChange={onCodeChange} />

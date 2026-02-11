@@ -4,31 +4,25 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard } from '@/components/ui/ThemedCard';
-import { StepSetup } from './components/StepSetup';
+import { StepSetup, type SetupFlow } from './components/StepSetup';
 import { StepAnalysis } from './components/StepAnalysis';
 import { StepReview } from './components/StepReview';
 import { StepComplete } from './components/StepComplete';
 import { SuiteControls } from './components/SuiteControls';
-import { ScreenshotMetadata, TestScenario, MascotConfig, CodeLanguage, PreviewMode, TestSuite } from '@/lib/types';
+import { ScreenshotMetadata, TestScenario, TestSuite } from '@/lib/types';
 import { generateTestCode } from '@/lib/playwright/generateTestCode';
 import { getTestSuites, getTestSuite, getLatestTestCode } from '@/lib/supabase/testSuites';
-import { getSuiteScreenshots, getTestScenarios } from '@/lib/supabase/suiteAssets';
+import { getTestScenarios } from '@/lib/supabase/suiteAssets';
 import { AlertCircle } from 'lucide-react';
-import { MascotAvatar } from '@/app/features/designer/sub_Mascot/components/MascotAvatar';
-import { inferMascotType } from '@/app/features/designer/sub_Mascot/lib/mascotGenerator';
 
 type WorkflowStep = 'setup' | 'analyzing' | 'review' | 'complete';
 export function Designer() {
   const { currentTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('setup');
+  const [setupFlow, setSetupFlow] = useState<SetupFlow>('ai');
   const [testSuiteName, setTestSuiteName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [description, setDescription] = useState('');
-  const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>('typescript');
-  const [mascotConfig, setMascotConfig] = useState<MascotConfig>({
-    type: 'robot',
-    colorScheme: 'default',
-  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [screenshots, setScreenshots] = useState<ScreenshotMetadata[]>([]);
   const [scenarios, setScenarios] = useState<TestScenario[]>([]);
@@ -39,36 +33,12 @@ export function Designer() {
   const [error, setError] = useState<string | null>(null);
   const [estimatedDurationMs, setEstimatedDurationMs] = useState<number>(300000); // Default 5 minutes
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
-  const [previewMode, setPreviewMode] = useState<PreviewMode>('lightweight');
+  const [manualScenarioNames, setManualScenarioNames] = useState<string>('');
 
-  // Suite management state
   const [availableSuites, setAvailableSuites] = useState<TestSuite[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoadingSuites, setIsLoadingSuites] = useState(false);
-
-  // Load preview mode preference from localStorage
-  useEffect(() => {
-    const savedPreviewMode = localStorage.getItem('pathfinder-preview-mode');
-    if (savedPreviewMode === 'lightweight' || savedPreviewMode === 'full') {
-      setPreviewMode(savedPreviewMode);
-    }
-  }, []);
-
-  // Save preview mode preference to localStorage
-  useEffect(() => {
-    localStorage.setItem('pathfinder-preview-mode', previewMode);
-  }, [previewMode]);
-
-  // Auto-infer mascot type when test suite name or description changes
-  useEffect(() => {
-    if (testSuiteName && mascotConfig.colorScheme === 'default') {
-      const inferredType = inferMascotType(testSuiteName, description);
-      if (inferredType !== mascotConfig.type) {
-        setMascotConfig((prev) => ({ ...prev, type: inferredType }));
-      }
-    }
-  }, [testSuiteName, description]);
 
   // Load available test suites on mount
   useEffect(() => {
@@ -101,9 +71,7 @@ export function Designer() {
       // Load latest test code
       const code = await getLatestTestCode(suiteId);
 
-      // Load screenshots
-      const suiteScreenshots = await getSuiteScreenshots(suiteId);
-      setScreenshots(suiteScreenshots);
+      setScreenshots([]);
 
       // Load test scenarios
       const suiteScenarios = await getTestScenarios(suiteId);
@@ -113,9 +81,6 @@ export function Designer() {
       setTestSuiteName(suite.name);
       setTargetUrl(suite.target_url);
       setDescription(suite.description || '');
-      if (suite.mascot_config) {
-        setMascotConfig(suite.mascot_config);
-      }
 
       if (code) {
         setGeneratedCode(code.code);
@@ -139,6 +104,39 @@ export function Designer() {
   const handleNewSuite = () => {
     resetWorkflow();
     setSelectedSuiteId('');
+  };
+
+  const createEmptyScenario = (): TestScenario => ({
+    id: crypto.randomUUID(),
+    name: 'New scenario',
+    description: '',
+    priority: 'medium',
+    category: 'functional',
+    steps: [],
+    expectedOutcomes: [],
+    viewports: [],
+  });
+
+  const startWithoutAI = () => {
+    if (!validateForm()) return;
+    setError(null);
+    setScreenshots([]);
+    const names = manualScenarioNames
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const initialScenarios =
+      names.length > 0
+        ? names.map((name) => ({ ...createEmptyScenario(), name }))
+        : [createEmptyScenario()];
+    setScenarios(initialScenarios);
+    setGeneratedCode(generateTestCode(testSuiteName, targetUrl, initialScenarios, 'typescript'));
+    setCurrentStep('review');
+  };
+
+  const handleScenariosChange = (next: TestScenario[]) => {
+    setScenarios(next);
+    setGeneratedCode(generateTestCode(testSuiteName, targetUrl, next, 'typescript'));
   };
 
   const validateForm = (): boolean => {
@@ -181,42 +179,22 @@ export function Designer() {
 
         if (complexityRes.ok) {
           const complexityData = await complexityRes.json();
-          const baseEstimation = complexityData.analysis.estimatedDurationMs;
-          // If lightweight mode, reduce estimation to 1/3 of original
-          const adjustedEstimation = previewMode === 'lightweight' ? Math.floor(baseEstimation / 3) : baseEstimation;
-          setEstimatedDurationMs(adjustedEstimation);
+          setEstimatedDurationMs(complexityData.analysis.estimatedDurationMs ?? 300000);
         }
-      } catch (error) {
-        // Complexity analysis failed, using default estimation
-        // Fallback: 5 minutes for full, ~1.67 minutes for lightweight
-        const fallbackEstimation = previewMode === 'lightweight' ? 100000 : 300000;
-        setEstimatedDurationMs(fallbackEstimation);
+      } catch {
+        setEstimatedDurationMs(300000);
       }
-
-      setProgressMessage(previewMode === 'lightweight' ? 'Capturing lightweight previews...' : 'Capturing full screenshots...');
-      setProgress(10);
-      const screenshotRes = await fetch('/api/screenshots/capture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl, previewMode }),
-      });
-
-      if (!screenshotRes.ok) {
-        const errorData = await screenshotRes.json();
-        throw new Error(errorData.error || 'Screenshot capture failed');
-      }
-
-      const screenshotData = await screenshotRes.json();
-      setScreenshots(screenshotData.screenshots);
-      setProgress(40);
 
       setProgressMessage('AI analyzing page structure...');
+      setProgress(20);
+      setScreenshots([]);
+
       const analysisRes = await fetch('/api/gemini/analyze-page', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: targetUrl,
-          screenshots: screenshotData.screenshots,
+          screenshots: [],
           codeAnalysis: null,
         }),
       });
@@ -232,7 +210,7 @@ export function Designer() {
       setProgress(70);
 
       setProgressMessage('Generating Playwright test code...');
-      const code = generateTestCode(testSuiteName, targetUrl, receivedScenarios, codeLanguage);
+      const code = generateTestCode(testSuiteName, targetUrl, receivedScenarios, 'typescript');
       setGeneratedCode(code);
       setProgress(100);
 
@@ -257,11 +235,11 @@ export function Designer() {
 
   const resetWorkflow = () => {
     setCurrentStep('setup');
+    setSetupFlow('ai');
     setTestSuiteName('');
     setTargetUrl('');
     setDescription('');
-    setCodeLanguage('typescript');
-    setMascotConfig({ type: 'robot', colorScheme: 'default' });
+    setManualScenarioNames('');
     setScreenshots([]);
     setScenarios([]);
     setGeneratedCode('');
@@ -276,27 +254,15 @@ export function Designer() {
   return (
     <div className="p-8 space-y-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {testSuiteName && (
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-              data-testid="designer-mascot"
-            >
-              <MascotAvatar config={mascotConfig} size="xl" animate={true} />
-            </motion.div>
-          )}
-          <div>
-              <motion.p
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-lg"
-                style={{ color: currentTheme.colors.text.secondary }}
-              >
-                {testSuiteName || 'New Test Suite'}
-              </motion.p>
-          </div>
+        <div>
+          <motion.p
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-lg"
+            style={{ color: currentTheme.colors.text.secondary }}
+          >
+            {testSuiteName || 'New Test Suite'}
+          </motion.p>
         </div>
         {/* Suite Management Controls */}
         <SuiteControls
@@ -322,20 +288,19 @@ export function Designer() {
 
       {currentStep === 'setup' && (
         <StepSetup
+          setupFlow={setupFlow}
+          setSetupFlow={setSetupFlow}
           testSuiteName={testSuiteName}
           setTestSuiteName={setTestSuiteName}
           targetUrl={targetUrl}
           setTargetUrl={setTargetUrl}
           description={description}
           setDescription={setDescription}
-          mascotConfig={mascotConfig}
-          setMascotConfig={setMascotConfig}
-          codeLanguage={codeLanguage}
-          setCodeLanguage={setCodeLanguage}
-          previewMode={previewMode}
-          setPreviewMode={setPreviewMode}
+          manualScenarioNames={manualScenarioNames}
+          setManualScenarioNames={setManualScenarioNames}
           errors={errors}
           onStartAnalysis={startAnalysis}
+          onAddManually={startWithoutAI}
         />
       )}
 
@@ -348,12 +313,14 @@ export function Designer() {
           screenshots={screenshots}
           scenarios={scenarios}
           generatedCode={generatedCode}
-          codeLanguage={codeLanguage}
+          codeLanguage="typescript"
           targetUrl={targetUrl}
           testSuiteName={testSuiteName}
           description={description}
-          mascotConfig={mascotConfig}
           onCodeChange={setGeneratedCode}
+          onScenariosChange={handleScenariosChange}
+          onSuiteNameChange={setTestSuiteName}
+          onDescriptionChange={setDescription}
           onSaveComplete={handleSaveComplete}
           onSaveError={handleSaveError}
           onReset={resetWorkflow}
@@ -365,7 +332,7 @@ export function Designer() {
         <StepComplete
           testSuiteName={testSuiteName}
           targetUrl={targetUrl}
-          codeLanguage={codeLanguage}
+          codeLanguage="typescript"
           generatedCode={generatedCode}
           onReset={resetWorkflow}
           onRunTests={() => {}}

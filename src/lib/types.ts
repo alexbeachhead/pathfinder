@@ -142,6 +142,8 @@ export interface TestScenario {
   steps: TestStep[];
   expectedOutcomes: string[];
   viewports: string[];
+  /** Optional URL for this scenario; overrides suite target_url when set */
+  targetUrl?: string;
 }
 
 export interface TestStep {

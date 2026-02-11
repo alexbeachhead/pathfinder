@@ -2,9 +2,11 @@
 
 import { useTheme } from '@/lib/stores/appStore';
 import { motion } from 'framer-motion';
-import { Edit3, Trash2 } from 'lucide-react';
+import { Edit3, Trash2, GripVertical } from 'lucide-react';
 import { getStepIcon, getStepColor } from '../lib';
 import type { StepCardProps } from '../lib';
+
+const FLOW_STEP_DRAG_TYPE = 'application/json';
 
 export function StepCard({
   step,
@@ -17,6 +19,12 @@ export function StepCard({
   const { currentTheme } = useTheme();
   const IconComponent = getStepIcon(step.type);
   const stepColor = getStepColor(step.type);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData(FLOW_STEP_DRAG_TYPE, JSON.stringify({ type: 'flow-step', stepId: step.id }));
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setDragImage(e.currentTarget.closest('[data-step-card]') as HTMLElement, 0, 0);
+  };
 
   // Build compact config info
   const configInfo = [
@@ -35,7 +43,7 @@ export function StepCard({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       onClick={onSelect}
-      className="px-3 py-2 rounded-lg cursor-pointer transition-all hover:scale-[1.005] group"
+      className="px-3 py-2 rounded-lg cursor-pointer transition-all hover:scale-[1.005] group flex items-center gap-2"
       style={{
         backgroundColor: isSelected
           ? currentTheme.colors.primary + '10'
@@ -47,8 +55,22 @@ export function StepCard({
           : currentTheme.colors.border,
       }}
       data-testid={`flow-step-${step.id}`}
+      data-step-card
     >
-      <div className="flex items-center gap-2">
+      {/* Drag handle - reorder by dragging */}
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        className="shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded touch-none"
+        style={{ color: currentTheme.colors.text.tertiary }}
+        onClick={(e) => e.stopPropagation()}
+        title="Drag to reorder"
+        data-testid={`drag-handle-${step.id}`}
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      <div className="flex items-center gap-2 flex-1 min-w-0">
         {/* Step Number - Compact */}
         <div
           className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
@@ -90,7 +112,7 @@ export function StepCard({
 
         {/* Description - Flexible */}
         <span
-          className="flex-1 text-xs truncate"
+          className="flex-1 text-xs truncate min-w-0"
           style={{ color: currentTheme.colors.text.primary }}
         >
           {step.config.description}
@@ -99,7 +121,7 @@ export function StepCard({
         {/* Config Info - Flexible */}
         {configInfo && (
           <code
-            className="flex-1 text-[10px] font-mono truncate"
+            className="flex-1 text-[10px] font-mono truncate min-w-0"
             style={{ color: currentTheme.colors.text.tertiary }}
           >
             {configInfo}

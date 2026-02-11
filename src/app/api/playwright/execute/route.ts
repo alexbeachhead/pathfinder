@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeTest } from '@/lib/playwright/runner';
 import { createTestRun, saveTestResult, updateTestRunStatus } from '@/lib/supabase/testRuns';
 import { getTestSuite, getLatestTestCode } from '@/lib/supabase/testSuites';
-import { uploadScreenshot, ScreenshotMetadata } from '@/lib/storage/screenshots';
 import { ViewportConfig } from '@/lib/types';
 
 export const maxDuration = 300; // 5 minutes max execution time
@@ -47,32 +46,14 @@ export async function POST(request: NextRequest) {
           screenshotOnEveryStep,
         });
 
-        // Upload screenshots
-        const screenshotUrls: string[] = [];
-        for (const screenshot of result.screenshots) {
-          try {
-            const metadata: ScreenshotMetadata = {
-              testRunId,
-              testName: result.testName,
-              stepName: screenshot.stepName,
-              viewport: result.viewport,
-              timestamp: screenshot.timestamp,
-            };
-            const url = await uploadScreenshot(screenshot.buffer, metadata);
-            screenshotUrls.push(url);
-          } catch (error) {
-            console.error('Failed to upload screenshot:', error);
-          }
-        }
-
-        // Save test result
+        // Save test result (screenshots feature removed)
         await saveTestResult(testRunId, {
           viewport: result.viewport,
           viewportSize: result.viewportSize,
           testName: result.testName,
           status: result.status,
           durationMs: result.durationMs,
-          screenshots: screenshotUrls,
+          screenshots: [],
           errors: result.errors,
           consoleLogs: result.consoleLogs,
         });
@@ -83,7 +64,7 @@ export async function POST(request: NextRequest) {
           durationMs: result.durationMs,
           consoleLogs: result.consoleLogs || [],
           errors: result.errors || [],
-          screenshots: screenshotUrls,
+          screenshots: [],
         });
       } catch (error: any) {
         console.error(`Test execution failed for viewport ${viewport}:`, error);

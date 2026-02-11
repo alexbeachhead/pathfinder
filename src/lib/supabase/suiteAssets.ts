@@ -1,87 +1,5 @@
 import { supabase } from '../supabase';
-import { ScreenshotMetadata, TestScenario } from '../types';
-
-/**
- * Save suite screenshots to database
- * This saves metadata about screenshots captured during suite generation
- */
-export async function saveSuiteScreenshots(
-  suiteId: string,
-  screenshots: ScreenshotMetadata[]
-): Promise<void> {
-  if (!screenshots || screenshots.length === 0) {
-    return;
-  }
-
-  const screenshotRecords = screenshots.map((screenshot, index) => {
-    const viewportSize = `${screenshot.width || 1920}x${screenshot.height || 1080}`;
-    return {
-      suite_id: suiteId,
-      viewport: screenshot.viewportName || 'desktop',
-      viewport_size: viewportSize,
-      screenshot_url: screenshot.screenshotUrl || screenshot.url || '',
-      storage_path: `${suiteId}/${screenshot.viewportName || 'desktop'}-${index}.png`,
-      captured_at: new Date().toISOString(),
-    };
-  });
-
-  const { error } = await supabase
-    .from('suite_screenshots')
-    .insert(screenshotRecords);
-
-  if (error) {
-    console.error('Failed to save suite screenshots:', error);
-    throw new Error(`Failed to save screenshots: ${error.message}`);
-  }
-}
-
-/**
- * Get screenshots for a test suite
- */
-export async function getSuiteScreenshots(
-  suiteId: string
-): Promise<ScreenshotMetadata[]> {
-  const { data, error } = await supabase
-    .from('suite_screenshots')
-    .select('*')
-    .eq('suite_id', suiteId)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('Failed to fetch suite screenshots:', error);
-    return [];
-  }
-
-  if (!data) {
-    return [];
-  }
-
-  return data.map((record) => {
-    const [width, height] = record.viewport_size.split('x').map(Number);
-    return {
-      viewportName: record.viewport,
-      width: width || 1920,
-      height: height || 1080,
-      url: record.screenshot_url,
-      screenshotUrl: record.screenshot_url,
-    };
-  });
-}
-
-/**
- * Delete screenshots for a test suite
- */
-export async function deleteSuiteScreenshots(suiteId: string): Promise<void> {
-  const { error } = await supabase
-    .from('suite_screenshots')
-    .delete()
-    .eq('suite_id', suiteId);
-
-  if (error) {
-    console.error('Failed to delete suite screenshots:', error);
-    throw new Error(`Failed to delete screenshots: ${error.message}`);
-  }
-}
+import { TestScenario } from '../types';
 
 /**
  * Save test scenarios to database
@@ -106,6 +24,7 @@ export async function saveTestScenarios(
       : '', // Convert array to string
     confidence_score: 0.8, // Default confidence score
     order_index: index,
+    target_url: scenario.targetUrl ?? null,
   }));
 
   const { error } = await supabase
@@ -148,8 +67,10 @@ export async function getTestScenarios(suiteId: string): Promise<TestScenario[]>
       ? record.expected_outcome.split('; ')
       : [], // Convert string back to array
     viewports: [], // Default empty array, could be enhanced later
+    targetUrl: record.target_url ?? undefined,
   }));
 }
+
 
 /**
  * Delete all scenarios for a test suite
@@ -200,6 +121,7 @@ export async function updateTestScenario(
       ? updates.expectedOutcomes.join('; ')
       : '';
   }
+  if (updates.targetUrl !== undefined) updateData.target_url = updates.targetUrl || null;
 
   const { error } = await supabase
     .from('test_scenarios')
@@ -219,7 +141,8 @@ export async function saveFlowScenario(
   suiteId: string,
   flowName: string,
   flowDescription: string,
-  flowSteps: any[]
+  flowSteps: any[],
+  targetUrl?: string
 ): Promise<string> {
   const scenarioRecord = {
     suite_id: suiteId,
@@ -230,6 +153,7 @@ export async function saveFlowScenario(
     category: 'flow-builder',
     confidence_score: 1.0, // User-created flows have full confidence
     order_index: 0,
+    target_url: targetUrl?.trim() || null,
   };
 
   const { data, error } = await supabase
@@ -253,15 +177,19 @@ export async function updateFlowScenario(
   scenarioId: string,
   flowName: string,
   flowDescription: string,
-  flowSteps: any[]
+  flowSteps: any[],
+  targetUrl?: string
 ): Promise<void> {
+  const updatePayload: Record<string, unknown> = {
+    title: flowName,
+    description: flowDescription,
+    steps: flowSteps,
+  };
+  if (targetUrl !== undefined) updatePayload.target_url = targetUrl?.trim() || null;
+
   const { error } = await supabase
     .from('test_scenarios')
-    .update({
-      title: flowName,
-      description: flowDescription,
-      steps: flowSteps,
-    })
+    .update(updatePayload)
     .eq('id', scenarioId);
 
   if (error) {
@@ -300,5 +228,6 @@ export async function getFlowScenarios(suiteId: string): Promise<TestScenario[]>
       ? record.expected_outcome.split('; ')
       : [],
     viewports: [],
+    targetUrl: record.target_url ?? undefined,
   }));
 }
