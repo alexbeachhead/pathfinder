@@ -2,6 +2,17 @@
 -- Purpose: Move quality metrics aggregation to database level for performance
 -- Date: 2025-01-15
 
+-- Add quality_score to ai_analyses if not present (used by dashboard aggregations)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_analyses' AND column_name = 'quality_score'
+  ) THEN
+    ALTER TABLE ai_analyses ADD COLUMN quality_score NUMERIC;
+  END IF;
+END $$;
+
 -- Function to get aggregated dashboard statistics
 CREATE OR REPLACE FUNCTION get_dashboard_stats(
   days_back INTEGER DEFAULT 30,

@@ -22,6 +22,7 @@ interface RunnerMonitorProps {
   onStartExecution: () => void;
   onAddToQueue: () => void;
   onAbortExecution?: () => void;
+  onDeleteScenario?: (scenarioId: string) => void | Promise<void>;
 }
 
 export function RunnerMonitor({
@@ -35,13 +36,14 @@ export function RunnerMonitor({
   onStartExecution,
   onAddToQueue,
   onAbortExecution,
+  onDeleteScenario,
 }: RunnerMonitorProps) {
   const { currentTheme } = useTheme();
 
   return (
     <div className="space-y-6">
       {/* Scenario List - Always visible */}
-      <RunnerScenarios scenarios={scenarios} selectedSuiteName={selectedSuiteName} />
+      <RunnerScenarios scenarios={scenarios} selectedSuiteName={selectedSuiteName} onDeleteScenario={onDeleteScenario} />
 
       {/* Idle State */}
       {executionState === 'idle' && (

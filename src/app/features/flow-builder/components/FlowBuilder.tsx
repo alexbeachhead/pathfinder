@@ -59,6 +59,12 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
     loadSuites();
   }, []);
 
+  // Clear scenario selection when suite changes (scenarios are per-suite)
+  useEffect(() => {
+    setSelectedScenarioId('');
+    setCurrentScenarioId(null);
+  }, [selectedSuiteId]);
+
   const loadSuites = async () => {
     try {
       setIsLoadingSuites(true);
@@ -146,9 +152,10 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
     }, 3000);
   };
 
-  // Handler for scenario selection
+  // Handler for scenario selection (syncs dropdown selection with "update vs create" for Save Flow)
   const handleSelectScenario = (scenarioId: string, scenario: any) => {
     setSelectedScenarioId(scenarioId);
+    setCurrentScenarioId(scenarioId || null);
 
     // Populate FlowBuilder with scenario data
     if (scenario && scenario.steps && scenario.steps.length > 0) {

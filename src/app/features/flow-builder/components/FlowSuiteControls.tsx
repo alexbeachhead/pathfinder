@@ -2,11 +2,11 @@
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { FolderOpen, FileText } from 'lucide-react';
+import { FolderOpen, FileText, Trash2 } from 'lucide-react';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedSelect } from '@/components/ui/ThemedSelect';
 import { TestSuite, TestScenario } from '@/lib/types';
-import { getFlowScenarios } from '@/lib/supabase/suiteAssets';
+import { getFlowScenarios, deleteTestScenario } from '@/lib/supabase/suiteAssets';
 
 interface FlowSuiteControlsProps {
   availableSuites?: TestSuite[];
@@ -55,6 +55,19 @@ export function FlowSuiteControls({
     const scenario = scenarios.find(s => s.id === scenarioId);
     if (scenario && onSelectScenario) {
       onSelectScenario(scenarioId, scenario);
+    }
+  };
+
+  const handleDeleteScenario = async () => {
+    if (!selectedScenarioId) return;
+    const scenario = scenarios.find(s => s.id === selectedScenarioId);
+    if (!scenario || !window.confirm(`Delete scenario "${scenario.name}"?`)) return;
+    try {
+      await deleteTestScenario(selectedScenarioId);
+      if (selectedSuiteId) await loadScenarios(selectedSuiteId);
+      if (onSelectScenario) onSelectScenario('', {} as TestScenario);
+    } catch (error) {
+      console.error('Failed to delete scenario:', error);
     }
   };
 
@@ -125,7 +138,7 @@ export function FlowSuiteControls({
             <FileText className="w-5 h-5" style={{ color: currentTheme.colors.accent }} />
           </div>
 
-          <div className="flex-1" style={{ minWidth: '200px', maxWidth: '400px' }}>
+          <div className="flex-1 flex items-center gap-2" style={{ minWidth: '200px', maxWidth: '400px' }}>
             <ThemedSelect
               value={selectedScenarioId || ''}
               onChange={handleScenarioChange}
@@ -143,6 +156,24 @@ export function FlowSuiteControls({
               isLoading={isLoadingScenarios}
               size="sm"
             />
+            {selectedScenarioId && (
+              <button
+                type="button"
+                onClick={handleDeleteScenario}
+                className="p-2 rounded transition-opacity hover:opacity-100 opacity-70"
+                style={{
+                  color: currentTheme.colors.text.tertiary,
+                  backgroundColor: currentTheme.colors.surface,
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: currentTheme.colors.border,
+                }}
+                aria-label="Delete selected scenario"
+                title="Delete scenario"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       )}

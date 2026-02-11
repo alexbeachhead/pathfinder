@@ -75,7 +75,9 @@ export async function POST(request: NextRequest) {
             timestamp,
           };
           screenshotUrl = await uploadScreenshot(screenshotBuffer, metadata);
-          console.log(`[Screenshot] Uploaded ${previewMode} screenshot: ${screenshotUrl}`);
+          if (screenshotUrl) {
+            console.log(`[Screenshot] Uploaded ${previewMode} screenshot: ${screenshotUrl}`);
+          }
         } catch (uploadError) {
           console.warn('Screenshot upload failed, using base64 fallback:', uploadError);
         }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/lib/stores/appStore';
+import { useSupabase } from '@/hooks/useSupabase';
 import { ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { getTestSuites } from '@/lib/supabase/testSuites';
 import { getTestScenarios } from '@/lib/supabase/suiteAssets';
@@ -20,6 +21,7 @@ interface SuiteWithScenarioCount extends TestSuite {
 
 export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSelectorProps) {
   const { currentTheme } = useTheme();
+  const { deleteTestSuite } = useSupabase();
   const [suites, setSuites] = useState<SuiteWithScenarioCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +58,14 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
     suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     suite.target_url.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDeleteSuite = async (suiteId: string) => {
+    await deleteTestSuite(suiteId);
+    if (selectedSuite?.id === suiteId) {
+      onSelectSuite(null);
+    }
+    await loadTestSuites();
+  };
 
   return (
     <div>
@@ -105,6 +115,7 @@ export function TestSuiteSelector({ selectedSuite, onSelectSuite }: TestSuiteSel
                 suite={suite}
                 isSelected={selectedSuite?.id === suite.id}
                 onClick={() => onSelectSuite(selectedSuite?.id === suite.id ? null : suite)}
+                onDelete={handleDeleteSuite}
                 theme={currentTheme}
                 index={index}
               />

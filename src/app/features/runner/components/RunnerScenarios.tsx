@@ -1,18 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
-import { FileText, Layers, CheckCircle2 } from 'lucide-react';
+import { FileText, Layers, CheckCircle2, Trash2 } from 'lucide-react';
 import type { TestScenario } from '@/lib/types';
 
 interface RunnerScenariosProps {
   scenarios: TestScenario[];
   selectedSuiteName?: string;
+  onDeleteScenario?: (scenarioId: string) => void | Promise<void>;
 }
 
-export function RunnerScenarios({ scenarios, selectedSuiteName }: RunnerScenariosProps) {
+export function RunnerScenarios({ scenarios, selectedSuiteName, onDeleteScenario }: RunnerScenariosProps) {
   const { currentTheme } = useTheme();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const getPriorityColor = (priority: string) => {
     const colors = {
@@ -53,7 +56,7 @@ export function RunnerScenarios({ scenarios, selectedSuiteName }: RunnerScenario
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: index * 0.03 }}
-              className="p-3 rounded-lg hover:scale-[1.01] transition-transform cursor-pointer"
+              className="p-3 rounded-lg hover:scale-[1.01] transition-transform cursor-pointer group"
               style={{
                 backgroundColor: currentTheme.colors.surface,
                 borderWidth: '1px',
@@ -119,16 +122,44 @@ export function RunnerScenarios({ scenarios, selectedSuiteName }: RunnerScenario
                   </div>
                 </div>
 
-                {/* Priority Badge */}
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium shrink-0"
-                  style={{
-                    backgroundColor: `${getPriorityColor(scenario.priority)}15`,
-                    color: getPriorityColor(scenario.priority),
-                  }}
-                >
-                  {getPriorityIcon(scenario.priority)}
-                  <span className="capitalize">{scenario.priority}</span>
+                {/* Priority Badge + Delete */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {onDeleteScenario && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!scenario.id) return;
+                        if (!window.confirm(`Delete scenario "${scenario.name}"?`)) return;
+                        setDeletingId(scenario.id);
+                        try {
+                          await onDeleteScenario(scenario.id);
+                        } finally {
+                          setDeletingId(null);
+                        }
+                      }}
+                      disabled={deletingId === scenario.id}
+                      className="p-1.5 rounded opacity-70 hover:opacity-100 transition-opacity"
+                      style={{
+                        color: currentTheme.colors.text.tertiary,
+                        backgroundColor: 'transparent',
+                      }}
+                      aria-label={`Delete ${scenario.name}`}
+                      data-testid={`scenario-delete-${scenario.id}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: `${getPriorityColor(scenario.priority)}15`,
+                      color: getPriorityColor(scenario.priority),
+                    }}
+                  >
+                    {getPriorityIcon(scenario.priority)}
+                    <span className="capitalize">{scenario.priority}</span>
+                  </div>
                 </div>
               </div>
 

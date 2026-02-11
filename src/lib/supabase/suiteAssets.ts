@@ -152,7 +152,7 @@ export async function getTestScenarios(suiteId: string): Promise<TestScenario[]>
 }
 
 /**
- * Delete scenarios for a test suite
+ * Delete all scenarios for a test suite
  */
 export async function deleteTestScenarios(suiteId: string): Promise<void> {
   const { error } = await supabase
@@ -163,6 +163,21 @@ export async function deleteTestScenarios(suiteId: string): Promise<void> {
   if (error) {
     console.error('Failed to delete test scenarios:', error);
     throw new Error(`Failed to delete scenarios: ${error.message}`);
+  }
+}
+
+/**
+ * Delete a single test scenario by id
+ */
+export async function deleteTestScenario(scenarioId: string): Promise<void> {
+  const { error } = await supabase
+    .from('test_scenarios')
+    .delete()
+    .eq('id', scenarioId);
+
+  if (error) {
+    console.error('Failed to delete test scenario:', error);
+    throw new Error(`Failed to delete scenario: ${error.message}`);
   }
 }
 

@@ -18,7 +18,7 @@ import { ThemedButton } from '@/components/ui/ThemedButton';
 import { useRunQueue } from '@/hooks/useRunQueue';
 import { VIEWPORTS } from '@/lib/config';
 import { useNavigation } from '@/lib/stores/appStore';
-import { getTestScenarios } from '@/lib/supabase/suiteAssets';
+import { getTestScenarios, deleteTestScenario } from '@/lib/supabase/suiteAssets';
 import {
   isFirstVisit,
   markAsVisited,
@@ -152,6 +152,15 @@ export function RealRunner() {
     } catch (error) {
       console.error('Failed to load scenarios:', error);
       setScenarios([]);
+    }
+  };
+
+  const handleDeleteScenario = async (scenarioId: string) => {
+    try {
+      await deleteTestScenario(scenarioId);
+      await loadScenarios();
+    } catch (error) {
+      console.error('Failed to delete scenario:', error);
     }
   };
 
@@ -363,6 +372,7 @@ export function RealRunner() {
             onStartExecution={startExecution}
             onAddToQueue={addToQueue}
             onAbortExecution={abortExecution}
+            onDeleteScenario={handleDeleteScenario}
           />
         </div>
 

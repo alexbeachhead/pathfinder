@@ -1,6 +1,8 @@
 import { supabase } from '../supabase';
 import { STORAGE_CONFIG } from '../config';
 
+let bucketMissingLogged = false;
+
 export interface ScreenshotMetadata {
   testRunId: string;
   testName: string;
@@ -30,9 +32,13 @@ export async function uploadScreenshot(
 
     const bucketExists = buckets?.find(b => b.name === STORAGE_CONFIG.screenshotBucket);
     if (!bucketExists) {
-      console.error(`Screenshot storage bucket '${STORAGE_CONFIG.screenshotBucket}' not found.`);
-      console.error(`Available buckets:`, buckets?.map(b => b.name).join(', ') || 'none');
-      console.error(`Please create the bucket in Supabase Storage or update STORAGE_CONFIG.screenshotBucket in src/lib/config.ts`);
+      if (!bucketMissingLogged) {
+        bucketMissingLogged = true;
+        console.warn(
+          `Screenshot storage bucket '${STORAGE_CONFIG.screenshotBucket}' not found. ` +
+            `Create it in Supabase Dashboard → Storage (see SUPABASE_SETUP.md). Screenshots will not be persisted.`
+        );
+      }
       return '';
     }
 
