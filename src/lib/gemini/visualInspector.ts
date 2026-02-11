@@ -317,9 +317,14 @@ export async function compareViewports(
     const viewports = Object.keys(screenshotsByViewport);
     const allScreenshots = Object.values(screenshotsByViewport).flat();
 
-    const imageParts = await Promise.all(
+    const rawParts = await Promise.all(
       allScreenshots.map(screenshot => screenshotToImagePart(screenshot))
     );
+    const imageParts = rawParts.filter((p): p is NonNullable<typeof p> => p != null);
+
+    if (imageParts.length === 0) {
+      return [];
+    }
 
     const prompt = getViewportComparisonPrompt(viewports);
 

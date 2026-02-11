@@ -84,8 +84,7 @@ export function Designer() {
 
       if (code) {
         setGeneratedCode(code.code);
-        setCodeLanguage(code.language);
-        // Skip directly to review step if code exists
+        // Skip directly to review step if code exists (code is always TypeScript)
         setCurrentStep('review');
       } else {
         // No code yet, stay in setup

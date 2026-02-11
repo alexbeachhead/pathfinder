@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
                 timestamp: new Date().toISOString(),
               });
 
-              const scenarioTargetUrl = scenario.target_url ?? scenario.targetUrl;
+              const scenarioTargetUrl = scenario.targetUrl;
               const result = await executeScenario({
                 scenario,
                 viewport,
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
                   // Analyze each screenshot separately (since we use scenario_results system)
                   for (const screenshotUrl of validScreenshotUrls) {
                     try {
-                      const analysisTargetUrl = scenario.target_url ?? scenario.targetUrl ?? suite.target_url;
+                      const analysisTargetUrl = scenario.targetUrl ?? suite.target_url;
                       const findings = await analyzeScreenshots(
                         [screenshotUrl],
                         {
