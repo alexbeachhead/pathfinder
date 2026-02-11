@@ -62,8 +62,8 @@ export function TestSuiteItem({ suite, isSelected, onClick, onDelete, theme, ind
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             style={{
-              backgroundColor: `${theme.colors.error ?? '#dc2626'}20`,
-              color: theme.colors.error ?? '#dc2626',
+              backgroundColor: '#dc262620',
+              color: '#dc2626',
             }}
             aria-label={`Delete ${suite.name}`}
             data-testid={`test-suite-delete-${suite.id}`}
