@@ -2,16 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/app/api/playwright/execute-scenarios/route.ts": {
-      "includeFiles": ".playwright-browsers/**"
+      "includeFiles": "playwright-browsers/**"
     },
     "src/app/api/playwright/execute-adhoc/route.ts": {
-      "includeFiles": ".playwright-browsers/**"
+      "includeFiles": "playwright-browsers/**"
     },
     "src/app/api/playwright/execute/route.ts": {
-      "includeFiles": ".playwright-browsers/**"
+      "includeFiles": "playwright-browsers/**"
     },
     "src/app/api/selectors/detect/route.ts": {
-      "includeFiles": ".playwright-browsers/**"
+      "includeFiles": "playwright-browsers/**"
     }
   }
 }
