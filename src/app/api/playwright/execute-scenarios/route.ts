@@ -375,7 +375,7 @@ async function executeScenario(options: {
   ensurePlaywrightBrowsersPath();
   const browser: Browser = await chromium.launch({
     headless: true,
-    channel: 'chromium', // use full Chromium from install (not headless_shell)
+    // Use default (headless_shell) - install with: npx playwright install chromium --only-shell
   });
   const startTime = Date.now();
   const screenshots: string[] = [];
