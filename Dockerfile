@@ -9,8 +9,12 @@ RUN npm ci
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers
 RUN npx playwright install chromium --with-deps --only-shell
 
-# Build the app
+# Build the app (NEXT_PUBLIC_* must be available so Next.js inlines them into the client bundle)
 COPY . .
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 RUN npm run build
 
 EXPOSE 8080
