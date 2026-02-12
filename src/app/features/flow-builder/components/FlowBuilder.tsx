@@ -166,6 +166,11 @@ export function FlowBuilder({ onSave, onExport }: FlowBuilderProps) {
     setSelectedScenarioId(scenarioId);
     setCurrentScenarioId(scenarioId || null);
 
+    // "Add new scenario" – stay in create mode; don't clear current flow
+    if (!scenarioId || scenario === null) {
+      return;
+    }
+
     // Populate FlowBuilder with scenario data
     if (scenario && scenario.steps && scenario.steps.length > 0) {
       // Clear existing flow

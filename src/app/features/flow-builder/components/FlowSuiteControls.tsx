@@ -8,13 +8,15 @@ import { ThemedSelect } from '@/components/ui/ThemedSelect';
 import { TestSuite, TestScenario } from '@/lib/types';
 import { getFlowScenarios, deleteTestScenario } from '@/lib/supabase/suiteAssets';
 
+const NEW_SCENARIO_VALUE = '__new__';
+
 interface FlowSuiteControlsProps {
   availableSuites?: TestSuite[];
   selectedSuiteId: string;
   selectedScenarioId?: string;
   isLoadingSuites: boolean;
   onSelectSuite: (suiteId: string) => void;
-  onSelectScenario?: (scenarioId: string, scenario: TestScenario) => void;
+  onSelectScenario?: (scenarioId: string, scenario: TestScenario | null) => void;
 }
 
 export function FlowSuiteControls({
@@ -38,6 +40,13 @@ export function FlowSuiteControls({
     }
   }, [selectedSuiteId]);
 
+  // Refresh scenario list when selectedScenarioId is set to an ID not in the list (e.g. after adding new scenario)
+  useEffect(() => {
+    if (selectedSuiteId && selectedScenarioId && !scenarios.some(s => s.id === selectedScenarioId)) {
+      loadScenarios(selectedSuiteId);
+    }
+  }, [selectedSuiteId, selectedScenarioId]);
+
   const loadScenarios = async (suiteId: string) => {
     try {
       setIsLoadingScenarios(true);
@@ -52,6 +61,10 @@ export function FlowSuiteControls({
   };
 
   const handleScenarioChange = (scenarioId: string) => {
+    if (scenarioId === NEW_SCENARIO_VALUE || scenarioId === '') {
+      onSelectScenario?.('', null);
+      return;
+    }
     const scenario = scenarios.find(s => s.id === scenarioId);
     if (scenario && onSelectScenario) {
       onSelectScenario(scenarioId, scenario);
@@ -140,18 +153,19 @@ export function FlowSuiteControls({
 
           <div className="flex-1 flex items-center gap-2" style={{ minWidth: '200px', maxWidth: '400px' }}>
             <ThemedSelect
-              value={selectedScenarioId || ''}
+              value={selectedScenarioId === '' ? NEW_SCENARIO_VALUE : (selectedScenarioId || NEW_SCENARIO_VALUE)}
               onChange={handleScenarioChange}
-              options={scenarios.map(scenario => ({
-                value: scenario.id || '',
-                label: scenario.name,
-              }))}
+              options={[
+                { value: NEW_SCENARIO_VALUE, label: '+ Add new scenario' },
+                ...scenarios.map(scenario => ({
+                  value: scenario.id || '',
+                  label: scenario.name,
+                })),
+              ]}
               placeholder={
                 isLoadingScenarios
                   ? 'Loading scenarios...'
-                  : scenarios.length === 0
-                  ? 'No scenarios available'
-                  : 'Select scenario...'
+                  : 'Select or add scenario...'
               }
               isLoading={isLoadingScenarios}
               size="sm"
