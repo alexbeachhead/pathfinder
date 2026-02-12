@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { TrendingUp, BarChart3 } from 'lucide-react';
-import type { QualityTrendPoint, IssuesByCategory } from '@/lib/supabase/dashboard';
+import type { QualityTrendPoint, IssuesByCategory } from '@/lib/supabase/dashboardTypes';
 
 interface QualityTrendsChartProps {
   trends: QualityTrendPoint[];

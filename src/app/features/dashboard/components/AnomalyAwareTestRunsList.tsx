@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/stores/appStore';
 import { useNavigation } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { ThemedButton } from '@/components/ui/ThemedButton';
-import { getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';
+import type { TestRunSummary } from '@/lib/supabase/dashboardTypes';
 import { useAnomalyDetection } from '@/lib/anomaly-detection/hooks';
 import { List, Filter, ChevronLeft, ChevronRight, Eye, Loader2, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 
@@ -36,11 +36,12 @@ export function AnomalyAwareTestRunsList() {
   const loadRuns = async () => {
     try {
       setLoading(true);
-      const filters: any = {};
-      if (statusFilter !== 'all') filters.status = statusFilter;
-      if (minQualityScore !== undefined) filters.minQualityScore = minQualityScore;
-
-      const result = await getRecentTestRuns(page, pageSize, filters);
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (minQualityScore !== undefined) params.set('minQualityScore', String(minQualityScore));
+      const res = await fetch(`/api/dashboard/recent-runs?${params}`);
+      if (!res.ok) throw new Error(await res.text());
+      const result = await res.json();
       setRuns(result.runs);
       setTotal(result.total);
     } catch (error) {

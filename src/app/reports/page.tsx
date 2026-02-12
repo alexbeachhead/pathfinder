@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Activity, Loader2, Clock, CheckCircle2, XCircle, PlayCircle, FileText } from 'lucide-react';
-import { getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';
+import type { TestRunSummary } from '@/lib/supabase/dashboardTypes';
 import Link from 'next/link';
 
 export default function ReportsPage() {
@@ -20,7 +20,9 @@ export default function ReportsPage() {
   const loadRecentRuns = async () => {
     try {
       setLoading(true);
-      const { runs } = await getRecentTestRuns(1, 50); // Fetch up to 50 runs for reports page
+      const res = await fetch('/api/dashboard/recent-runs?page=1&pageSize=50');
+      if (!res.ok) throw new Error(await res.text());
+      const { runs } = await res.json();
       setRecentRuns(runs);
     } catch (error) {
       // Error is handled silently - consider adding error state if needed

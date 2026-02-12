@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
-import { compareTestRuns, getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';
+import type { TestRunSummary } from '@/lib/supabase/dashboardTypes';
 import { GitCompare, TrendingUp, TrendingDown, ArrowRight, Loader2 } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import { ComparisonMetricRow } from './ComparisonMetricRow';
@@ -42,12 +42,12 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
   const loadAvailableRuns = async () => {
     try {
       setLoading(true);
-      const result = await getRecentTestRuns(1, 10, { status: 'completed' });
-      // Filter out current run
-      const otherRuns = result.runs.filter(r => r.id !== currentRunId);
+      const res = await fetch('/api/dashboard/recent-runs?page=1&pageSize=10&status=completed');
+      if (!res.ok) throw new Error(await res.text());
+      const result = await res.json();
+      const otherRuns = (result.runs as TestRunSummary[]).filter(r => r.id !== currentRunId);
       setAvailableRuns(otherRuns);
 
-      // Auto-select the most recent run as the comparison baseline
       if (otherRuns.length > 0) {
         setSelectedPreviousRunId(otherRuns[0].id);
       }
@@ -63,7 +63,11 @@ export function HistoricalComparison({ currentRunId }: HistoricalComparisonProps
 
     try {
       setLoading(true);
-      const data = await compareTestRuns(currentRunId, selectedPreviousRunId);
+      const res = await fetch(
+        `/api/dashboard/compare-runs?current=${encodeURIComponent(currentRunId)}&previous=${encodeURIComponent(selectedPreviousRunId)}`
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
       setComparison(data);
     } catch (error) {
       // Failed to load comparison - silently fail

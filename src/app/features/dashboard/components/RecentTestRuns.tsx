@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { ThemedCard, ThemedCardHeader, ThemedCardContent } from '@/components/ui/ThemedCard';
 import { Activity, Loader2, Clock, CheckCircle2, XCircle, PlayCircle } from 'lucide-react';
-import { getRecentTestRuns, type TestRunSummary } from '@/lib/supabase/dashboard';
+import type { TestRunSummary } from '@/lib/supabase/dashboardTypes';
 import Link from 'next/link';
 
 export function RecentTestRuns() {
@@ -20,7 +20,9 @@ export function RecentTestRuns() {
   const loadRecentRuns = async () => {
     try {
       setLoading(true);
-      const { runs } = await getRecentTestRuns(1, 20); // Fetch up to 20 runs
+      const res = await fetch('/api/dashboard/recent-runs?page=1&pageSize=20');
+      if (!res.ok) throw new Error(await res.text());
+      const { runs } = await res.json();
       setRecentRuns(runs);
     } catch (error) {
       console.error('Failed to load recent test runs:', error);

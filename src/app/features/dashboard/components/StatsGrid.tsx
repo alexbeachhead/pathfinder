@@ -2,7 +2,7 @@
 
 import { Activity, CheckCircle2, AlertCircle, Target } from 'lucide-react';
 import { StatCard } from './StatCard';
-import type { DashboardStats } from '@/lib/supabase/dashboard';
+import type { DashboardStats } from '@/lib/supabase/dashboardTypes';
 
 interface StatsGridProps {
   dashboardStats: DashboardStats;

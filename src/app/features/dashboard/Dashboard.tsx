@@ -8,7 +8,7 @@ import { StatsGrid } from './components/StatsGrid';
 import { RecentTestRuns } from './components/RecentTestRuns';
 import { QualityTrendsChart } from './components/QualityTrendsChart';
 import { TestRunsList } from './components/TestRunsList';
-import { getDashboardStats, getQualityTrends, getIssuesByCategory, type DashboardStats, type QualityTrendPoint, type IssuesByCategory } from '@/lib/supabase/dashboard';
+import type { DashboardStats, QualityTrendPoint, IssuesByCategory } from '@/lib/supabase/dashboardTypes';
 
 export function Dashboard() {
   const { currentTheme, setHealthGlow } = useTheme();
@@ -25,20 +25,16 @@ export function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [stats, prevStats, trends, issues] = await Promise.all([
-        getDashboardStats(30), // Current period: last 30 days
-        getDashboardStats(30, 30), // Previous period: 30-60 days ago
-        getQualityTrends(30),
-        getIssuesByCategory(30),
-      ]);
+      const res = await fetch('/api/dashboard?daysBack=30');
+      if (!res.ok) throw new Error(await res.text());
+      const { stats, previousStats: prevStats, trends, issues } = await res.json();
 
       setDashboardStats(stats);
       setPreviousStats(prevStats);
       setQualityTrends(trends);
       setIssuesByCategory(issues);
 
-      // Calculate overall health based on pass rate
-      updateHealthGlow(stats.passRate);
+      if (stats?.passRate != null) updateHealthGlow(stats.passRate);
     } catch (error) {
       // Error loading dashboard data - silently handle
     } finally {
