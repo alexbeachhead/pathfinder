@@ -1,4 +1,5 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import { ensurePlaywrightBrowsersPath } from './ensureBrowsersPath';
 import { ViewportConfig, ConsoleLog, ErrorObject } from '../types';
 
 export interface TestExecutionOptions {
@@ -35,6 +36,7 @@ export interface NetworkLog {
 export async function executeTest(
   options: TestExecutionOptions
 ): Promise<TestExecutionResult> {
+  ensurePlaywrightBrowsersPath();
   const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],

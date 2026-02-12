@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { chromium, Browser, Page } from 'playwright';
+import { ensurePlaywrightBrowsersPath } from '@/lib/playwright/ensureBrowsersPath';
 import { createTestRun, updateTestRunStatus } from '@/lib/supabase/testRuns';
 import { getTestSuite } from '@/lib/supabase/testSuites';
 import { getTestScenarios } from '@/lib/supabase/suiteAssets';
@@ -371,6 +372,7 @@ async function executeScenario(options: {
 }): Promise<ScenarioExecutionResult> {
   const { scenario, viewport, testRunId, suiteName, targetUrl, screenshotOnEveryStep } = options;
 
+  ensurePlaywrightBrowsersPath();
   const browser: Browser = await chromium.launch({ headless: true });
   const startTime = Date.now();
   const screenshots: string[] = [];

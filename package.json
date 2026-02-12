@@ -7,7 +7,8 @@
     "dev:clean": "rm -f .next/dev/lock && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "playwright:install": "playwright install chromium"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chromium, Page } from 'playwright';
+import { ensurePlaywrightBrowsersPath } from '@/lib/playwright/ensureBrowsersPath';
 
 export const maxDuration = 120;
 
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Launch browser
+    ensurePlaywrightBrowsersPath();
     browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
