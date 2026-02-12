@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chromium, Page } from 'playwright';
-import { ensurePlaywrightBrowsersPath } from '@/lib/playwright/ensureBrowsersPath';
+import { ensurePlaywrightBrowsersPath, getPlaywrightBrowsersUnavailableReason } from '@/lib/playwright/ensureBrowsersPath';
 
 export const maxDuration = 120;
 
@@ -119,6 +119,13 @@ export async function POST(request: Request) {
     }
 
     ensurePlaywrightBrowsersPath();
+    const browsersUnavailable = getPlaywrightBrowsersUnavailableReason();
+    if (browsersUnavailable) {
+      return NextResponse.json(
+        { error: browsersUnavailable },
+        { status: 503 }
+      );
+    }
     browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']

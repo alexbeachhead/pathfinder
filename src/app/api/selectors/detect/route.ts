@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chromium } from 'playwright';
+import { ensurePlaywrightBrowsersPath, getPlaywrightBrowsersUnavailableReason } from '@/lib/playwright/ensureBrowsersPath';
 
 export const maxDuration = 60;
 
@@ -30,6 +31,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'URL is required' },
         { status: 400 }
+      );
+    }
+
+    ensurePlaywrightBrowsersPath();
+    const browsersUnavailable = getPlaywrightBrowsersUnavailableReason();
+    if (browsersUnavailable) {
+      return NextResponse.json(
+        { error: browsersUnavailable },
+        { status: 503 }
       );
     }
 

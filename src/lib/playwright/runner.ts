@@ -1,5 +1,5 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { ensurePlaywrightBrowsersPath } from './ensureBrowsersPath';
+import { ensurePlaywrightBrowsersPath, getPlaywrightBrowsersUnavailableReason } from './ensureBrowsersPath';
 import { ViewportConfig, ConsoleLog, ErrorObject } from '../types';
 
 export interface TestExecutionOptions {
@@ -37,6 +37,8 @@ export async function executeTest(
   options: TestExecutionOptions
 ): Promise<TestExecutionResult> {
   ensurePlaywrightBrowsersPath();
+  const unavailable = getPlaywrightBrowsersUnavailableReason();
+  if (unavailable) throw new Error(unavailable);
   const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],

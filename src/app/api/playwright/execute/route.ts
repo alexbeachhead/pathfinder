@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ensurePlaywrightBrowsersPath, getPlaywrightBrowsersUnavailableReason } from '@/lib/playwright/ensureBrowsersPath';
 import { executeTest } from '@/lib/playwright/runner';
 import { createTestRun, saveTestResult, updateTestRunStatus } from '@/lib/supabase/testRuns';
 import { getTestSuite, getLatestTestCode } from '@/lib/supabase/testSuites';
@@ -31,6 +32,12 @@ export async function POST(request: NextRequest) {
 
     // Create test run
     const testRunId = await createTestRun(suiteId, { viewports });
+
+    ensurePlaywrightBrowsersPath();
+    const browsersUnavailable = getPlaywrightBrowsersUnavailableReason();
+    if (browsersUnavailable) {
+      return NextResponse.json({ error: browsersUnavailable }, { status: 503 });
+    }
 
     const results = [];
 

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { chromium, Browser, Page } from 'playwright';
-import { ensurePlaywrightBrowsersPath } from '@/lib/playwright/ensureBrowsersPath';
+import { ensurePlaywrightBrowsersPath, getPlaywrightBrowsersUnavailableReason } from '@/lib/playwright/ensureBrowsersPath';
 import { createTestRun, updateTestRunStatus } from '@/lib/supabase/testRuns';
 import { getTestSuite } from '@/lib/supabase/testSuites';
 import { getTestScenarios } from '@/lib/supabase/suiteAssets';
@@ -72,6 +72,14 @@ export async function POST(request: NextRequest) {
 
         // Create test run
         const testRunId = await createTestRun(suiteId, { viewports });
+
+        ensurePlaywrightBrowsersPath();
+        const browsersUnavailable = getPlaywrightBrowsersUnavailableReason();
+        if (browsersUnavailable) {
+          sendEvent('error', { error: browsersUnavailable });
+          controller.close();
+          return;
+        }
 
         const results: ScenarioExecutionResult[] = [];
         const totalScenarios = scenarios.length * viewports.length;
@@ -372,7 +380,6 @@ async function executeScenario(options: {
 }): Promise<ScenarioExecutionResult> {
   const { scenario, viewport, testRunId, suiteName, targetUrl, screenshotOnEveryStep } = options;
 
-  ensurePlaywrightBrowsersPath();
   const browser: Browser = await chromium.launch({
     headless: true,
     // Use default (headless_shell) - install with: npx playwright install chromium --only-shell
