@@ -110,7 +110,7 @@ export function FlowSuiteControls({
           <FolderOpen className="w-5 h-5" style={{ color: currentTheme.colors.primary }} />
         </div>
 
-        <div className="flex-1" style={{ minWidth: '200px', maxWidth: '400px' }}>
+        <div className="flex-1 min-w-0" style={{ minWidth: '260px', maxWidth: '480px' }}>
           <ThemedSelect
             value={selectedSuiteId}
             onChange={(suiteId) => {
@@ -151,7 +151,8 @@ export function FlowSuiteControls({
             <FileText className="w-5 h-5" style={{ color: currentTheme.colors.accent }} />
           </div>
 
-          <div className="flex-1 flex items-center gap-2" style={{ minWidth: '200px', maxWidth: '400px' }}>
+          <div className="flex-1 flex items-center gap-2 min-w-0" style={{ minWidth: '260px', maxWidth: '480px' }}>
+            <div className="flex-1 min-w-0">
             <ThemedSelect
               value={selectedScenarioId === '' ? NEW_SCENARIO_VALUE : (selectedScenarioId || NEW_SCENARIO_VALUE)}
               onChange={handleScenarioChange}
@@ -170,6 +171,7 @@ export function FlowSuiteControls({
               isLoading={isLoadingScenarios}
               size="sm"
             />
+            </div>
             {selectedScenarioId && (
               <button
                 type="button"
