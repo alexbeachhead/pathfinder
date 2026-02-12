@@ -2,6 +2,7 @@ import path from 'path';
 import { existsSync, readdirSync } from 'fs';
 
 const BROWSERS_DIRS = ['playwright-browsers', '.playwright-browsers'] as const;
+const DOCKER_BROWSERS_PATH = '/app/playwright-browsers';
 
 /**
  * Point Playwright at project-installed browsers (e.g. from build step
@@ -18,16 +19,28 @@ export function ensurePlaywrightBrowsersPath(): void {
       return;
     }
   }
+  if (existsSync(DOCKER_BROWSERS_PATH)) {
+    process.env.PLAYWRIGHT_BROWSERS_PATH = DOCKER_BROWSERS_PATH;
+  }
 }
 
-/** Path to chromium headless_shell executable, or null if not installed. */
+/** Path to chromium headless_shell (or full chrome) executable, or null if not installed. */
 function findChromiumHeadlessShell(baseDir: string): string | null {
   try {
     const entries = readdirSync(baseDir);
-    const chromiumDir = entries.find((e) => e.startsWith('chromium_headless_shell-'));
-    if (!chromiumDir) return null;
-    const executable = path.join(baseDir, chromiumDir, 'chrome-linux', 'headless_shell');
-    return existsSync(executable) ? executable : null;
+    // Prefer headless_shell (from playwright install chromium --only-shell)
+    const headlessDir = entries.find((e) => e.startsWith('chromium_headless_shell-'));
+    if (headlessDir) {
+      const exe = path.join(baseDir, headlessDir, 'chrome-linux', 'headless_shell');
+      if (existsSync(exe)) return exe;
+    }
+    // Fallback: full chromium (from playwright install chromium without --only-shell)
+    const fullDir = entries.find((e) => e.startsWith('chromium-'));
+    if (fullDir) {
+      const exe = path.join(baseDir, fullDir, 'chrome-linux', 'chrome');
+      if (existsSync(exe)) return exe;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -41,6 +54,7 @@ function findChromiumHeadlessShell(baseDir: string): string | null {
 export function getPlaywrightBrowsersUnavailableReason(): string | null {
   const base =
     process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    (existsSync(DOCKER_BROWSERS_PATH) ? DOCKER_BROWSERS_PATH : null) ||
     BROWSERS_DIRS.map((d) => path.join(process.cwd(), d)).find((p) => existsSync(p));
   const onVercel = process.env.VERCEL === '1';
   const unavailableOnDeployment =
