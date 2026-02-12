@@ -316,6 +316,7 @@ export function Designer() {
           targetUrl={targetUrl}
           testSuiteName={testSuiteName}
           description={description}
+          existingSuiteId={selectedSuiteId || undefined}
           onCodeChange={setGeneratedCode}
           onScenariosChange={handleScenariosChange}
           onSuiteNameChange={setTestSuiteName}

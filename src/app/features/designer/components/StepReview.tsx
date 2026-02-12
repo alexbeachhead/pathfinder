@@ -5,9 +5,9 @@ import { ThemedButton } from '@/components/ui/ThemedButton';
 import { TestCodeEditor } from './TestCodeEditor';
 import { ScenarioPreview } from './ScenarioPreview';
 import { ScreenshotMetadata, TestScenario, CodeLanguage } from '@/lib/types';
-import { createTestSuite, saveTestCode } from '@/lib/supabase/testSuites';
+import { createTestSuite, updateTestSuite, saveTestCode } from '@/lib/supabase/testSuites';
 import { getOrCreateDefaultBranch, createSnapshot } from '@/lib/supabase/branches';
-import { saveTestScenarios } from '@/lib/supabase/suiteAssets';
+import { saveTestScenarios, deleteTestScenarios } from '@/lib/supabase/suiteAssets';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/stores/appStore';
 import { Code, PlusIcon, FileText } from 'lucide-react';
@@ -20,6 +20,8 @@ interface StepReviewProps {
   targetUrl?: string;
   testSuiteName: string;
   description: string;
+  /** When set, save updates this suite instead of creating a new one */
+  existingSuiteId?: string;
   onCodeChange: (code: string) => void;
   onScenariosChange?: (scenarios: TestScenario[]) => void;
   onSuiteNameChange?: (name: string) => void;
@@ -74,6 +76,7 @@ export function StepReview({
   targetUrl = '',
   testSuiteName,
   description,
+  existingSuiteId,
   onCodeChange,
   onScenariosChange,
   onSuiteNameChange,
@@ -92,12 +95,24 @@ export function StepReview({
     try {
       setIsSaving(true);
 
-      // Create test suite
-      const suiteId = await createTestSuite({
-        name: testSuiteName,
-        target_url: targetUrl,
-        description,
-      });
+      const suiteId = existingSuiteId
+        ? await (async () => {
+            // Update existing suite
+            await updateTestSuite(existingSuiteId, {
+              name: testSuiteName,
+              target_url: targetUrl,
+              description,
+            });
+            // Replace scenarios: remove existing, then save current
+            await deleteTestScenarios(existingSuiteId);
+            await saveScenariosIfAvailable(existingSuiteId, scenarios);
+            return existingSuiteId;
+          })()
+        : await createTestSuite({
+            name: testSuiteName,
+            target_url: targetUrl,
+            description,
+          });
 
       // Ensure default branch exists
       const defaultBranch = await getOrCreateDefaultBranch(suiteId);
@@ -105,15 +120,14 @@ export function StepReview({
       // Save test code with language preference
       await saveTestCode(suiteId, generatedCode, codeLanguage);
 
-      await saveScenariosIfAvailable(suiteId, scenarios);
+      if (!existingSuiteId) {
+        await saveScenariosIfAvailable(suiteId, scenarios);
+      }
 
       // Create snapshot for the branch
       await createBranchSnapshot(suiteId, defaultBranch.id, testSuiteName, targetUrl, description);
 
-      // Reload suites list to include newly created suite
       onReloadSuites();
-
-      // Notify parent of successful save
       onSaveComplete(suiteId, defaultBranch.id);
     } catch (err) {
       onSaveError((err as Error).message);
