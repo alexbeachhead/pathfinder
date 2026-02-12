@@ -23,7 +23,7 @@ function getSupabase(): SupabaseClient {
 /** Use getSupabase() so the client is created at runtime, not at build time (allows build without env vars). */
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_, prop) {
-    return (getSupabase() as Record<string, unknown>)[prop as string];
+    return (getSupabase() as unknown as Record<string, unknown>)[prop as string];
   },
 });
 
