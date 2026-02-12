@@ -373,7 +373,10 @@ async function executeScenario(options: {
   const { scenario, viewport, testRunId, suiteName, targetUrl, screenshotOnEveryStep } = options;
 
   ensurePlaywrightBrowsersPath();
-  const browser: Browser = await chromium.launch({ headless: true });
+  const browser: Browser = await chromium.launch({
+    headless: true,
+    channel: 'chromium', // use full Chromium from install (not headless_shell)
+  });
   const startTime = Date.now();
   const screenshots: string[] = [];
   const consoleLogs: ConsoleLog[] = [];
