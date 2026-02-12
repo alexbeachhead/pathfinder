@@ -42,16 +42,17 @@ export function getPlaywrightBrowsersUnavailableReason(): string | null {
   const base =
     process.env.PLAYWRIGHT_BROWSERS_PATH ||
     BROWSERS_DIRS.map((d) => path.join(process.cwd(), d)).find((p) => existsSync(p));
+  const onVercel = process.env.VERCEL === '1';
+  const unavailableOnDeployment =
+    'Run tests is not available on this deployment. Run tests locally or deploy to Railway/Render. See docs/DEPLOYMENT.md.';
+
   if (!base || !existsSync(base)) {
-    return (
-      'Playwright browsers are not installed. Run "npx playwright install chromium" (or set PLAYWRIGHT_BROWSERS_PATH and install in the build).'
-    );
+    return onVercel
+      ? unavailableOnDeployment
+      : 'Playwright browsers are not installed. Run "npx playwright install chromium" (or set PLAYWRIGHT_BROWSERS_PATH and install in the build).';
   }
   if (!findChromiumHeadlessShell(base)) {
-    return (
-      'Run tests is not available on this deployment: the browser binary was not bundled (e.g. Vercel\'s 50MB function limit). ' +
-      'Run tests locally or deploy to Railway/Render. See docs/DEPLOYMENT.md.'
-    );
+    return unavailableOnDeployment;
   }
   return null;
 }
